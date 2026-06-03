@@ -80,7 +80,7 @@ Once the winning model was selected, it was used to generate a **pre-computed pr
 
 ## The Dashboard
 
-The final product is a single HTML file deployable on GitHub Pages. It opens on a **Find Parking** tab showing an interactive stylized campus map, with lot pins color-coded from green (likely open) to red (usually full) based on the ML model's predictions.
+The final product is a single HTML file deployable on GitHub Pages. https://shawnduong18.github.io/ucsd-parking-dashboard/ It opens on a **Find Parking** tab showing an interactive stylized campus map, with lot pins color-coded from green (likely open) to red (usually full) based on the ML model's predictions.
 
 A user selects their destination from a dropdown, sets their arrival time with a slider, picks their permit type, and hits Find Parking. The map highlights nearby lots, dims the rest, and produces a ranked list of options below. Clicking any pin shows a popup with the full hourly occupancy profile for that lot.
 
