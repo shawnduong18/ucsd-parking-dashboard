@@ -52,9 +52,9 @@ With the data cleaned, I created visualizations to better understand parking beh
 
 The most striking finding was visible in a single trend line: university-wide peak occupancy hit **91.1% in Winter 2019–20**, then collapsed to **40.2% in Spring 2019–20** when COVID emptied the campus. It has never fully recovered — recent periods plateau around 63–67%.
 
-A seasonal heatmap (hour × quarter) made the daily occupancy pattern immediately clear. The **10am–12pm window in Fall and Winter** is consistently the darkest block — this became one of the key features in the machine learning model.
+A seasonal heatmap (hour × quarter) made the daily occupancy pattern immediately clear. The **10am–12pm window in Fall and Winter** is consistently the darkest block this became one of the key features in the machine learning model.
 
-A box plot of peak occupancy by permit type revealed something interesting about SR (Special Reserved) spaces: they are nearly 100% occupied in almost every period, with almost no spread. Reserved permit spaces, on the other hand, hover around 35–50% with high variability — suggesting chronic oversupply.
+A box plot of peak occupancy by permit type revealed something interesting about SR (Special Reserved) spaces: they are nearly 100% occupied in almost every period, with almost no spread. Reserved permit spaces, on the other hand, hover around 35–50% with high variability.
 
 A correlation matrix of the hourly stall counts confirmed strong positive correlations across adjacent hours (0.95+), validating the assumption that occupancy builds and drops smoothly throughout the day rather than spiking randomly.
 
@@ -89,8 +89,6 @@ A user selects their destination from a dropdown, sets their arrival time with a
 The rest of the dashboard is organized into a **Trends** dropdown with three sub-pages:
 
 - **Overview** — the university-wide occupancy trend across all 20 survey periods, with the COVID drop and recovery arc clearly visible
-- **By Space Type** — a daily profile chart comparing how different permit types fill up hour by hour in any selected period
-- **Structures** — hourly occupancy curves for named parking structures like Gilman, Hopkins, Pangea, and South, covering 2019–2023
 
 An **About** tab documents the data source, permit type definitions, and known limitations for users unfamiliar with the survey methodology.
 
@@ -118,7 +116,9 @@ The campus map brings the data to life in a way that a table or chart cannot. Wa
 
 ## Conclusions and Next Steps
 
-This project laid a foundation that can grow considerably with more data. Some directions worth exploring:
+The purpose of this project goes further than to build a tool and gain insight, it was an oppertunity to contribute value to my community as well as refine my technical skills. 
+
+The current iteration of the project is a foundation that can grow considerably with more data. Some directions worth exploring:
 
 **Real-time sensor integration** would be the single most impactful improvement. Connecting to live occupancy feeds would transform the tool from a historical pattern guide into a day-of planning resource — something closer to the live traffic layer in Google Maps.
 
