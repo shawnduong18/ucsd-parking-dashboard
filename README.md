@@ -86,9 +86,7 @@ The final product is a single HTML file deployable on GitHub Pages. https://shaw
 
 A user selects their destination from a dropdown, sets their arrival time with a slider, picks their permit type, and hits Find Parking. The map highlights nearby lots, dims the rest, and produces a ranked list of options below. Clicking any pin shows a popup with the full hourly occupancy profile for that lot.
 
-The rest of the dashboard is organized into a **Trends** dropdown with three sub-pages:
-
-- **Overview** — the university-wide occupancy trend across all 20 survey periods, with the COVID drop and recovery arc clearly visible
+An **Overview** tab dispalying the university-wide occupancy trend across all 20 survey periods.
 
 An **About** tab documents the data source, permit type definitions, and known limitations for users unfamiliar with the survey methodology.
 
