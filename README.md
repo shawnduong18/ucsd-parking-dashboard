@@ -10,7 +10,7 @@ This project started as a data visualization challenge and transformed into a fu
 
 I used the following data sources:
 
-**UCSD Transportation Services** provided 20 quarterly parking occupancy survey files spanning Fall 2019 through Winter 2025–26. Each file records physical stall counts — occupied and empty — at 10 hourly snapshots throughout a single survey day, broken down by lot and permit type.
+**UCSD Transportation Services** provided 20 quarterly parking occupancy survey files spanning Fall 2019 through Winter 2025–26. Each file contains occupancy records at hourly intervals throughout a single survey day, broken down by lot and permit type.
 
 I used the following tools for my analysis and modeling:
 
@@ -20,7 +20,7 @@ I used the following tools for my analysis and modeling:
 
 **scikit-learn** was used to train and evaluate the classification model — specifically `GradientBoostingRegressor` for the prediction table and `RandomForestClassifier`, `LogisticRegression`, and `KNeighborsClassifier` for the model comparison analysis.
 
-**Matplotlib + Seaborn** were used to generate exploratory visualizations including violin plots, heatmaps, box plots, and trend lines from the cleaned dataset.
+**Matplotlib + Seaborn** were used to generate exploratory visualizations including heatmaps, box plots, and trend lines from the cleaned dataset.
 
 **Chart.js** powers all of the interactive charts in the web dashboard — line charts, bar charts, and horizontal rankings.
 
@@ -30,11 +30,13 @@ I used the following tools for my analysis and modeling:
 
 ## The Data Challenge
 
-Before any analysis could happen, the data had to be cleaned — and that turned out to be the most significant engineering challenge of the project.
+Before any analysis could happen, the data had to be cleaned which turned out to be the most challenging part of this project. 
+
+Initially I wanted to use parking data dating all the way back to 2000, however the sheer amount of data as well as the varying file formats from legacy records made the data consoloidation extremely difficult. I opted to reduce the scope of the data to 2019 to 2026 to make the process easier as well as keep parking trends consistent. 
 
 The 20 source files came in **three distinct format generations**. The older `.xlsx` files from 2019–2022 used one sheet layout. A transitional format appeared in 2022–2023 with pivot table structures and seasonally named sheets. The newer `.xlsm` macro-enabled files from 2024 onward were redesigned entirely, with a raw `Pivot Table Data` sheet replacing the aggregated summaries.
 
-Each generation required its own parsing logic. A single unified script would try to open each file, inspect the sheet names, and route it to the correct parser — a pattern that ended up being one of the more satisfying parts of the build.
+Each generation required its own parsing logic. A single unified script would try to open each file, inspect the sheet names, and route it to the correct parser.
 
 Beyond the format differences, the data had other issues: survey footnotes being parsed as lot IDs, space type labels like `"D ($5.00)"` that needed to be normalized to `"D"`, and numeric lot IDs from the SIO area that looked like data errors but were actually legitimate lot numbers.
 
@@ -46,7 +48,7 @@ It's also worth noting: the **2023–24 academic year is completely absent** fro
 
 ## Exploratory Visualizations
 
-With the data cleaned, the first step was understanding what it actually showed.
+With the data cleaned, I created visualizations to better understand parking behavior at UC San Diego. 
 
 The most striking finding was visible in a single trend line: university-wide peak occupancy hit **91.1% in Winter 2019–20**, then collapsed to **40.2% in Spring 2019–20** when COVID emptied the campus. It has never fully recovered — recent periods plateau around 63–67%.
 
