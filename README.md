@@ -66,13 +66,13 @@ The model frames the prediction as a **binary classification problem**: given a 
 
 Three models were tested and compared using 5-fold stratified cross-validation:
 
-| Model | Accuracy | F1 Score |
-|---|---|---|
-| Logistic Regression | 71.8% | 83.6% |
-| **Random Forest** | **73.6%** | **84.0%** |
-| K-Nearest Neighbors | 72.2% | 82.3% |
+| Model | Accuracy | Precision | Recall | F1 Score |
+|---|---|---|---|---|
+| Logistic Regression | 71.8% | 71.8% | 100.0% | 83.6% |
+| **Random Forest** | **73.6%** | **74.4%** | **96.6%** | **84.0%** |
+| K-Nearest Neighbors | 72.2% | 75.8% | 90.1% | 82.3% |
 
-**Random Forest** was selected as the final model based on its F1 score, which balances precision and recall. For a parking tool, recall matters more than precision — it's worse to tell a student a lot is full when it has spaces than to occasionally send them somewhere that turns out to be fuller than expected.
+**Random Forest** was selected as the final model based on its F1 score, which balances precision and recall. For a parking tool, recall matters more than precision. I wanted to make sure that the model did not produce a high percentage of false positives, because from a product standpoint telling a user that a spot is available when it really is unavailable is not viable. 
 
 Feature importance analysis from the Random Forest revealed that **hour of day** and **campus location** are the two strongest predictors, followed by academic quarter and permit type. This makes intuitive sense: the time of day drives the core occupancy curve, and different parts of campus have very different baseline demand.
 
