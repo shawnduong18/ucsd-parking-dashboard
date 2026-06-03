@@ -12,7 +12,7 @@ I used the following data sources:
 
 **UCSD Transportation Services** provided 20 quarterly parking occupancy survey files spanning Fall 2019 through Winter 2025–26. Each file records physical stall counts — occupied and empty — at 10 hourly snapshots throughout a single survey day, broken down by lot and permit type.
 
-And I used the following tools:
+I used the following tools for my analysis and modeling:
 
 **Python** was the backbone of the entire data pipeline. I used it to clean and combine the source files, engineer features for the machine learning model, and export pre-computed predictions for the dashboard.
 
