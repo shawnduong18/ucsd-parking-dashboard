@@ -118,16 +118,14 @@ The purpose of this project goes further than to build a tool and gain insight, 
 
 The current iteration of the project is a foundation that can grow considerably with more data. Some directions worth exploring:
 
-**Real-time sensor integration** would be the single most impactful improvement. Connecting to live occupancy feeds would transform the tool from a historical pattern guide into a day-of planning resource — something closer to the live traffic layer in Google Maps.
-
-**More survey days per quarter** would meaningfully reduce the model's uncertainty. Even two or three survey days would allow the model to learn day-of-week effects and separate typical days from unusual ones.
+**Real-time sensor integration** would be the single most impactful improvement. Connecting to live occupancy feeds would transform the tool from a historical pattern guide into a day-of planning resource, something closer to the live traffic layer in Google Maps.
 
 **A Google Maps or campus schematic overlay** for the interactive map would replace the current stylized campus drawing with accurate lot boundaries and real geography, making the Find Parking tool significantly more intuitive.
 
 **Exam period and event flagging** would add an important layer of context. Parking during finals week behaves very differently from a typical Tuesday in October, and the current model has no way to distinguish between the two.
 
-The full source code — three Python scripts and the HTML dashboard — is available on GitHub. Running the pipeline on updated survey files automatically retrains the model and regenerates the prediction table, so keeping the dashboard current requires nothing more than dropping in the new file and running the scripts.
+The full source code: three Python scripts and the HTML dashboard is available on GitHub. Running the pipeline on updated survey files automatically retrains the model and regenerates the prediction table, so keeping the dashboard current requires nothing more than dropping in the new file and running the scripts.
 
 ---
 
-*Data source: UCSD Transportation Services Occupancy Survey Files, 2019–2026. Built with Python, scikit-learn, Chart.js, and a lot of Excel.*
+*Data source: UCSD Transportation Services Occupancy Survey Files, 2019–2026.*
