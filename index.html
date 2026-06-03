@@ -1251,8 +1251,8 @@ function closeTrends(){ }
       const HOURS = ['8am','9am','10am','11am','12pm','1pm','2pm','3pm','4pm','5pm'];
       const PERMITS = ['A','B','S','D','Visitor'];
       const QUARTERS = ['Fall','Winter','Spring','Summer'];
-      const LOTS = [{"id":"P303","x":20,"y":11,"A":[0.31,0.48,0.64,0.76,0.77,0.75,0.73,0.68,0.54,0.4],"B":[0.29,0.46,0.62,0.74,0.75,0.73,0.71,0.66,0.52,0.38]},{"id":"P308","x":14,"y":7,"A":[0.33,0.51,0.67,0.79,0.8,0.78,0.76,0.7,0.56,0.42],"B":[0.31,0.49,0.65,0.77,0.78,0.76,0.74,0.68,0.54,0.4]},{"id":"P309","x":25,"y":16,"A":[0.35,0.53,0.69,0.81,0.82,0.8,0.78,0.72,0.58,0.44],"B":[0.33,0.51,0.67,0.79,0.8,0.78,0.76,0.7,0.56,0.42]},{"id":"P310","x":10,"y":13,"A":[0.28,0.45,0.6,0.72,0.73,0.71,0.69,0.64,0.51,0.38],"B":[0.26,0.43,0.58,0.7,0.71,0.69,0.67,0.62,0.49,0.36]},{"id":"P101","x":10,"y":62,"A":[0.36,0.55,0.72,0.85,0.86,0.84,0.82,0.76,0.62,0.46],"B":[0.34,0.52,0.63,0.74,0.75,0.73,0.71,0.65,0.51,0.35]},{"id":"P105","x":7,"y":66,"A":[0.34,0.53,0.7,0.83,0.84,0.82,0.8,0.74,0.6,0.44],"B":[0.32,0.5,0.61,0.72,0.73,0.71,0.69,0.63,0.49,0.33]},{"id":"P113","x":13,"y":72,"A":[0.38,0.57,0.74,0.87,0.88,0.86,0.84,0.78,0.64,0.48],"B":[0.36,0.54,0.65,0.76,0.77,0.75,0.73,0.67,0.53,0.37]},{"id":"P116","x":11,"y":76,"A":[0.4,0.59,0.76,0.89,0.9,0.88,0.86,0.8,0.66,0.5],"B":[0.38,0.56,0.67,0.78,0.79,0.77,0.75,0.69,0.55,0.39]},{"id":"P201","x":52,"y":36,"A":[0.42,0.62,0.8,0.94,0.95,0.93,0.91,0.84,0.7,0.53],"B":[0.4,0.6,0.72,0.85,0.86,0.84,0.82,0.75,0.61,0.45]},{"id":"P204","x":46,"y":40,"A":[0.44,0.64,0.82,0.96,0.97,0.95,0.93,0.86,0.72,0.55],"B":[0.42,0.62,0.74,0.87,0.88,0.86,0.84,0.77,0.63,0.47]},{"id":"P205","x":42,"y":43,"A":[0.4,0.6,0.78,0.92,0.93,0.91,0.89,0.82,0.68,0.51],"B":[0.38,0.58,0.7,0.83,0.84,0.82,0.8,0.73,0.59,0.43]},{"id":"P401","x":38,"y":60,"A":[0.37,0.56,0.75,0.88,0.89,0.87,0.85,0.79,0.65,0.49],"B":[0.36,0.54,0.65,0.77,0.78,0.76,0.74,0.68,0.54,0.38],"S":[0.22,0.4,0.58,0.68,0.67,0.65,0.64,0.58,0.46,0.34]},{"id":"P402","x":31,"y":65,"A":[0.35,0.54,0.73,0.86,0.87,0.85,0.83,0.77,0.63,0.47],"B":[0.34,0.52,0.63,0.75,0.76,0.74,0.72,0.66,0.52,0.36]},{"id":"P407","x":47,"y":64,"A":[0.4,0.58,0.78,0.91,0.92,0.9,0.88,0.82,0.68,0.52],"B":[0.38,0.56,0.67,0.79,0.8,0.78,0.76,0.7,0.56,0.4]},{"id":"P408","x":50,"y":72,"A":[0.42,0.61,0.79,0.93,0.94,0.92,0.9,0.83,0.69,0.53],"B":[0.4,0.58,0.69,0.81,0.82,0.8,0.78,0.72,0.58,0.42]},{"id":"P501","x":15,"y":32,"A":[0.32,0.5,0.66,0.78,0.79,0.77,0.75,0.7,0.56,0.42],"B":[0.3,0.48,0.64,0.76,0.77,0.75,0.73,0.68,0.54,0.4],"S":[0.18,0.36,0.55,0.65,0.64,0.62,0.61,0.56,0.44,0.32]},{"id":"P502","x":11,"y":35,"A":[0.3,0.48,0.64,0.76,0.77,0.75,0.73,0.68,0.54,0.4],"B":[0.28,0.46,0.62,0.74,0.75,0.73,0.71,0.66,0.52,0.38]},{"id":"P504","x":18,"y":38,"A":[0.28,0.46,0.62,0.74,0.75,0.73,0.71,0.66,0.52,0.38],"B":[0.26,0.44,0.6,0.72,0.73,0.71,0.69,0.64,0.5,0.36]},{"id":"P508","x":22,"y":33,"A":[0.34,0.52,0.68,0.8,0.81,0.79,0.77,0.72,0.58,0.44],"B":[0.32,0.5,0.66,0.78,0.79,0.77,0.75,0.7,0.56,0.42]},{"id":"P601","x":86,"y":26,"A":[0.33,0.51,0.67,0.79,0.8,0.78,0.76,0.71,0.57,0.43],"Visitor":[0.28,0.45,0.6,0.72,0.73,0.71,0.69,0.64,0.51,0.38]},{"id":"P603","x":88,"y":36,"A":[0.31,0.49,0.65,0.77,0.78,0.76,0.74,0.69,0.55,0.41],"Visitor":[0.26,0.43,0.58,0.7,0.71,0.69,0.67,0.62,0.49,0.36]},{"id":"P604","x":83,"y":48,"A":[0.29,0.47,0.63,0.75,0.76,0.74,0.72,0.67,0.53,0.39],"Visitor":[0.24,0.41,0.56,0.68,0.69,0.67,0.65,0.6,0.47,0.34]},{"id":"P606","x":91,"y":42,"A":[0.33,0.51,0.67,0.79,0.8,0.78,0.76,0.71,0.57,0.43]},{"id":"P701","x":82,"y":60,"A":[0.35,0.53,0.69,0.82,0.83,0.81,0.79,0.74,0.6,0.46]},{"id":"P704","x":88,"y":70,"A":[0.33,0.51,0.67,0.8,0.81,0.79,0.77,0.72,0.58,0.44]},{"id":"P741","x":91,"y":52,"S":[0.44,0.63,0.79,0.88,0.88,0.88,0.87,0.83,0.75,0.7]},{"id":"P904","x":60,"y":14,"A":[0.25,0.42,0.57,0.68,0.69,0.67,0.65,0.61,0.48,0.35],"B":[0.23,0.4,0.55,0.66,0.67,0.65,0.63,0.59,0.46,0.33]},{"id":"P907","x":67,"y":20,"A":[0.27,0.44,0.59,0.7,0.71,0.69,0.67,0.63,0.5,0.37],"B":[0.25,0.42,0.57,0.68,0.69,0.67,0.65,0.61,0.48,0.35]},{"id":"P910","x":72,"y":24,"A":[0.29,0.46,0.61,0.72,0.73,0.71,0.69,0.65,0.52,0.39],"B":[0.27,0.44,0.59,0.7,0.71,0.69,0.67,0.63,0.5,0.37]},{"id":"P003","x":5,"y":92,"B":[0.22,0.38,0.52,0.62,0.63,0.61,0.59,0.55,0.43,0.31],"Visitor":[0.2,0.36,0.5,0.6,0.61,0.59,0.57,0.53,0.41,0.29]},{"id":"P007","x":8,"y":88,"B":[0.2,0.35,0.48,0.58,0.59,0.57,0.55,0.51,0.4,0.28]},{"id":"P952","x":28,"y":86,"A":[0.2,0.35,0.48,0.58,0.59,0.57,0.55,0.51,0.4,0.28],"B":[0.18,0.33,0.46,0.56,0.57,0.55,0.53,0.49,0.38,0.26]},{"id":"P960","x":34,"y":89,"B":[0.16,0.3,0.44,0.54,0.55,0.53,0.51,0.47,0.36,0.24]}];
-      const DESTS = {"geisel":{"l":"Geisel Library / Price Center","svgX":185,"svgY":430,"lots":["P401","P402","P407","P408"]},"rimac":{"l":"RIMAC / Rady School","svgX":85,"svgY":60,"lots":["P303","P308","P309"]},"warren":{"l":"Warren / Sixth / Marshall","svgX":220,"svgY":280,"lots":["P201","P204","P205"]},"revelle":{"l":"Revelle / Muir","svgX":50,"svgY":475,"lots":["P101","P105","P113","P116"]},"health":{"l":"Health Sciences","svgX":400,"svgY":240,"lots":["P601","P603","P604","P606"]},"scholars":{"l":"Scholars / Mesa Nueva","svgX":300,"svgY":100,"lots":["P904","P907","P910"]},"hopkins":{"l":"Hopkins / South Mesa","svgX":70,"svgY":230,"lots":["P501","P502","P504","P508"]},"sio":{"l":"SIO / Scripps","svgX":40,"svgY":650,"lots":["P003","P007"]}};
+      const LOTS = [{"id":"P303","x":20,"y":11,"A":[0.31,0.48,0.64,0.76,0.77,0.75,0.73,0.68,0.54,0.4],"B":[0.29,0.46,0.62,0.74,0.75,0.73,0.71,0.66,0.52,0.38],"type":"surface"},{"id":"P308","x":14,"y":7,"A":[0.33,0.51,0.67,0.79,0.8,0.78,0.76,0.7,0.56,0.42],"B":[0.31,0.49,0.65,0.77,0.78,0.76,0.74,0.68,0.54,0.4],"type":"surface"},{"id":"P309","x":25,"y":16,"A":[0.35,0.53,0.69,0.81,0.82,0.8,0.78,0.72,0.58,0.44],"B":[0.33,0.51,0.67,0.79,0.8,0.78,0.76,0.7,0.56,0.42],"type":"surface"},{"id":"P310","x":10,"y":13,"A":[0.28,0.45,0.6,0.72,0.73,0.71,0.69,0.64,0.51,0.38],"B":[0.26,0.43,0.58,0.7,0.71,0.69,0.67,0.62,0.49,0.36],"type":"surface"},{"id":"P101","x":10,"y":62,"A":[0.36,0.55,0.72,0.85,0.86,0.84,0.82,0.76,0.62,0.46],"B":[0.34,0.52,0.63,0.74,0.75,0.73,0.71,0.65,0.51,0.35],"type":"surface"},{"id":"P105","x":7,"y":66,"A":[0.34,0.53,0.7,0.83,0.84,0.82,0.8,0.74,0.6,0.44],"B":[0.32,0.5,0.61,0.72,0.73,0.71,0.69,0.63,0.49,0.33],"type":"surface"},{"id":"P113","x":13,"y":72,"A":[0.38,0.57,0.74,0.87,0.88,0.86,0.84,0.78,0.64,0.48],"B":[0.36,0.54,0.65,0.76,0.77,0.75,0.73,0.67,0.53,0.37],"type":"surface"},{"id":"P116","x":11,"y":76,"A":[0.4,0.59,0.76,0.89,0.9,0.88,0.86,0.8,0.66,0.5],"B":[0.38,0.56,0.67,0.78,0.79,0.77,0.75,0.69,0.55,0.39],"type":"surface"},{"id":"P201","x":52,"y":36,"A":[0.42,0.62,0.8,0.94,0.95,0.93,0.91,0.84,0.7,0.53],"B":[0.4,0.6,0.72,0.85,0.86,0.84,0.82,0.75,0.61,0.45],"type":"surface"},{"id":"P204","x":46,"y":40,"A":[0.44,0.64,0.82,0.96,0.97,0.95,0.93,0.86,0.72,0.55],"B":[0.42,0.62,0.74,0.87,0.88,0.86,0.84,0.77,0.63,0.47],"type":"surface"},{"id":"P205","x":42,"y":43,"A":[0.4,0.6,0.78,0.92,0.93,0.91,0.89,0.82,0.68,0.51],"B":[0.38,0.58,0.7,0.83,0.84,0.82,0.8,0.73,0.59,0.43],"type":"surface"},{"id":"P401","x":38,"y":60,"A":[0.37,0.56,0.75,0.88,0.89,0.87,0.85,0.79,0.65,0.49],"B":[0.36,0.54,0.65,0.77,0.78,0.76,0.74,0.68,0.54,0.38],"S":[0.22,0.4,0.58,0.68,0.67,0.65,0.64,0.58,0.46,0.34],"type":"surface"},{"id":"P402","x":31,"y":65,"A":[0.35,0.54,0.73,0.86,0.87,0.85,0.83,0.77,0.63,0.47],"B":[0.34,0.52,0.63,0.75,0.76,0.74,0.72,0.66,0.52,0.36],"type":"surface"},{"id":"P407","x":47,"y":64,"A":[0.4,0.58,0.78,0.91,0.92,0.9,0.88,0.82,0.68,0.52],"B":[0.38,0.56,0.67,0.79,0.8,0.78,0.76,0.7,0.56,0.4],"type":"surface"},{"id":"P408","x":50,"y":72,"A":[0.42,0.61,0.79,0.93,0.94,0.92,0.9,0.83,0.69,0.53],"B":[0.4,0.58,0.69,0.81,0.82,0.8,0.78,0.72,0.58,0.42],"type":"surface"},{"id":"P501","x":15,"y":32,"A":[0.32,0.5,0.66,0.78,0.79,0.77,0.75,0.7,0.56,0.42],"B":[0.3,0.48,0.64,0.76,0.77,0.75,0.73,0.68,0.54,0.4],"S":[0.18,0.36,0.55,0.65,0.64,0.62,0.61,0.56,0.44,0.32],"type":"surface"},{"id":"P502","x":11,"y":35,"A":[0.3,0.48,0.64,0.76,0.77,0.75,0.73,0.68,0.54,0.4],"B":[0.28,0.46,0.62,0.74,0.75,0.73,0.71,0.66,0.52,0.38],"type":"surface"},{"id":"P504","x":18,"y":38,"A":[0.28,0.46,0.62,0.74,0.75,0.73,0.71,0.66,0.52,0.38],"B":[0.26,0.44,0.6,0.72,0.73,0.71,0.69,0.64,0.5,0.36],"type":"surface"},{"id":"P508","x":22,"y":33,"A":[0.34,0.52,0.68,0.8,0.81,0.79,0.77,0.72,0.58,0.44],"B":[0.32,0.5,0.66,0.78,0.79,0.77,0.75,0.7,0.56,0.42],"type":"surface"},{"id":"P601","x":86,"y":26,"A":[0.33,0.51,0.67,0.79,0.8,0.78,0.76,0.71,0.57,0.43],"Visitor":[0.28,0.45,0.6,0.72,0.73,0.71,0.69,0.64,0.51,0.38],"type":"surface"},{"id":"P603","x":88,"y":36,"A":[0.31,0.49,0.65,0.77,0.78,0.76,0.74,0.69,0.55,0.41],"Visitor":[0.26,0.43,0.58,0.7,0.71,0.69,0.67,0.62,0.49,0.36],"type":"surface"},{"id":"P604","x":83,"y":48,"A":[0.29,0.47,0.63,0.75,0.76,0.74,0.72,0.67,0.53,0.39],"Visitor":[0.24,0.41,0.56,0.68,0.69,0.67,0.65,0.6,0.47,0.34],"type":"surface"},{"id":"P606","x":91,"y":42,"A":[0.33,0.51,0.67,0.79,0.8,0.78,0.76,0.71,0.57,0.43],"type":"surface"},{"id":"P701","x":82,"y":60,"A":[0.35,0.53,0.69,0.82,0.83,0.81,0.79,0.74,0.6,0.46],"type":"surface"},{"id":"P704","x":88,"y":70,"A":[0.33,0.51,0.67,0.8,0.81,0.79,0.77,0.72,0.58,0.44],"type":"surface"},{"id":"P741","x":91,"y":52,"S":[0.44,0.63,0.79,0.88,0.88,0.88,0.87,0.83,0.75,0.7],"type":"surface"},{"id":"P904","x":60,"y":14,"A":[0.25,0.42,0.57,0.68,0.69,0.67,0.65,0.61,0.48,0.35],"B":[0.23,0.4,0.55,0.66,0.67,0.65,0.63,0.59,0.46,0.33],"type":"surface"},{"id":"P907","x":67,"y":20,"A":[0.27,0.44,0.59,0.7,0.71,0.69,0.67,0.63,0.5,0.37],"B":[0.25,0.42,0.57,0.68,0.69,0.67,0.65,0.61,0.48,0.35],"type":"surface"},{"id":"P910","x":72,"y":24,"A":[0.29,0.46,0.61,0.72,0.73,0.71,0.69,0.65,0.52,0.39],"B":[0.27,0.44,0.59,0.7,0.71,0.69,0.67,0.63,0.5,0.37],"type":"surface"},{"id":"P003","x":5,"y":92,"B":[0.22,0.38,0.52,0.62,0.63,0.61,0.59,0.55,0.43,0.31],"Visitor":[0.2,0.36,0.5,0.6,0.61,0.59,0.57,0.53,0.41,0.29],"type":"surface"},{"id":"P007","x":8,"y":88,"B":[0.2,0.35,0.48,0.58,0.59,0.57,0.55,0.51,0.4,0.28],"type":"surface"},{"id":"P952","x":28,"y":86,"A":[0.2,0.35,0.48,0.58,0.59,0.57,0.55,0.51,0.4,0.28],"B":[0.18,0.33,0.46,0.56,0.57,0.55,0.53,0.49,0.38,0.26],"type":"surface"},{"id":"P960","x":34,"y":89,"B":[0.16,0.3,0.44,0.54,0.55,0.53,0.51,0.47,0.36,0.24],"type":"surface"},{"id":"Gilman","name":"Gilman Parking Structure","type":"structure","x":35,"y":55,"A":[0.42,0.62,0.81,0.93,0.95,0.93,0.91,0.84,0.7,0.52],"B":[0.4,0.6,0.78,0.9,0.92,0.9,0.88,0.81,0.67,0.49],"S":[0.28,0.48,0.66,0.78,0.8,0.78,0.76,0.69,0.55,0.38]},{"id":"Hopkins","name":"Hopkins Parking Structure","type":"structure","x":18,"y":38,"A":[0.38,0.57,0.74,0.86,0.88,0.86,0.84,0.78,0.64,0.47],"B":[0.36,0.55,0.72,0.84,0.86,0.84,0.82,0.76,0.62,0.45],"S":[0.25,0.43,0.61,0.73,0.75,0.73,0.71,0.65,0.51,0.36]},{"id":"Pangea","name":"Pangea Parking Structure","type":"structure","x":8,"y":12,"A":[0.32,0.5,0.67,0.79,0.81,0.79,0.77,0.71,0.57,0.41],"B":[0.3,0.48,0.65,0.77,0.79,0.77,0.75,0.69,0.55,0.39]},{"id":"Athena","name":"Athena Parking Structure","type":"structure","x":82,"y":45,"A":[0.4,0.59,0.77,0.89,0.91,0.89,0.87,0.8,0.66,0.49],"Visitor":[0.35,0.54,0.72,0.84,0.86,0.84,0.82,0.75,0.61,0.45]},{"id":"CampusPtE","name":"Campus Point East Structure","type":"structure","x":96,"y":30,"A":[0.34,0.52,0.69,0.81,0.83,0.81,0.79,0.73,0.59,0.42],"Visitor":[0.3,0.48,0.65,0.77,0.79,0.77,0.75,0.69,0.55,0.39]},{"id":"CampusPtW","name":"Campus Point West Structure","type":"structure","x":85,"y":33,"A":[0.36,0.54,0.71,0.83,0.85,0.83,0.81,0.75,0.61,0.44],"Visitor":[0.32,0.5,0.67,0.79,0.81,0.79,0.77,0.71,0.57,0.41]},{"id":"Scholars","name":"Scholars Parking Structure","type":"structure","x":65,"y":16,"A":[0.28,0.46,0.62,0.74,0.76,0.74,0.72,0.66,0.52,0.36],"B":[0.26,0.44,0.6,0.72,0.74,0.72,0.7,0.64,0.5,0.34]},{"id":"South","name":"South Parking Structure","type":"structure","x":35,"y":80,"A":[0.36,0.54,0.72,0.84,0.86,0.84,0.82,0.76,0.62,0.45],"B":[0.34,0.52,0.7,0.82,0.84,0.82,0.8,0.74,0.6,0.43],"S":[0.24,0.42,0.6,0.72,0.74,0.72,0.7,0.64,0.5,0.34]},{"id":"OneMiramar","name":"One Miramar St Structure","type":"structure","x":14,"y":20,"A":[0.3,0.48,0.65,0.77,0.79,0.77,0.75,0.69,0.55,0.39],"B":[0.28,0.46,0.63,0.75,0.77,0.75,0.73,0.67,0.53,0.37]},{"id":"TheatreDist","name":"Theatre District Structure","type":"structure","x":45,"y":72,"A":[0.38,0.56,0.74,0.86,0.88,0.86,0.84,0.78,0.64,0.47],"Visitor":[0.34,0.52,0.7,0.82,0.84,0.82,0.8,0.74,0.6,0.43]}];
+      const DESTS = {"geisel":{"l":"Geisel Library / Price Center","svgX":185,"svgY":430},"rimac":{"l":"RIMAC / Rady School","svgX":85,"svgY":60},"warren":{"l":"Warren / Sixth / Marshall","svgX":220,"svgY":280},"revelle":{"l":"Revelle / Muir","svgX":50,"svgY":475},"health":{"l":"Health Sciences","svgX":400,"svgY":240},"scholars":{"l":"Scholars / Mesa Nueva","svgX":300,"svgY":100},"hopkins":{"l":"Hopkins / South Mesa","svgX":70,"svgY":230},"sio":{"l":"SIO / Scripps","svgX":40,"svgY":650}};
       const ZONE_LOTS = {"pz-rimac":["P303","P308","P309","P310"],"pz-warren":["P201","P204","P205"],"pz-scholars":["P904","P907","P910"],"pz-revelle":["P101","P105","P113","P116"],"pz-geisel":["P401","P402","P407","P408"],"pz-rady":["P303","P308"],"pz-health":["P601","P603","P604","P606"],"pz-bio":["P601","P603"],"pz-medical":["P701","P704"],"pz-hopkins":["P501","P502","P504","P508"],"pz-sio":["P003","P007"],"pz-sw":["P952","P960"],"pz-cp":["P741"]};
 
       const LM = Object.fromEntries(LOTS.map(l => [l.id, l]));
@@ -1304,10 +1304,13 @@ function closeTrends(){ }
       const pinsLayer = document.getElementById('fp2-pins');
       LOTS.forEach(l => {
         const p = document.createElement('div');
-        p.className = 'fp2-pin';
+        p.className = 'fp2-pin' + (l.type === 'structure' ? ' fp2-pin-struct' : '');
         p.id = 'fp2-pin-' + l.id;
-        p.style.cssText = 'left:'+l.x+'%;top:'+l.y+'%;pointer-events:all;background:#999';
-        p.title = l.id;
+        const size = l.type === 'structure' ? 14 : 10;
+        const radius = l.type === 'structure' ? '3px' : '50%';
+        p.style.cssText = 'left:'+l.x+'%;top:'+l.y+'%;pointer-events:all;background:#999;' +
+          'width:'+size+'px;height:'+size+'px;border-radius:'+radius+';';
+        p.title = l.name || l.id;
         p.onclick = () => selectLot(l.id);
         pinsLayer.appendChild(p);
       });
@@ -1319,13 +1322,15 @@ function closeTrends(){ }
       }
 
       function colorMap(){
-        const dl = curDest ? DESTS[curDest].lots : null;
+        // Color all pins by their predicted occupancy
         LOTS.forEach(l => {
           const p = document.getElementById('fp2-pin-' + l.id);
           if(!p) return;
           p.style.background = pinColor(getOcc(l.id, curPermit, curHour));
-          p.classList.toggle('dim', dl && !dl.includes(l.id));
+          // Dim handling moves to renderResults() since it picks the candidates
+          if(!curDest) p.classList.remove('dim');
         });
+        // Color zones
         Object.keys(ZONE_LOTS).forEach(z => {
           const el = document.getElementById(z);
           if(!el) return;
@@ -1354,40 +1359,82 @@ function closeTrends(){ }
         renderResults();
       }
 
+      // Distance from a lot to a destination (in SVG units)
+      function lotDistance(lot, dest){
+        const lotSvgX = lot.x * 4.6;   // viewBox is 460 wide
+        const lotSvgY = lot.y * 7.18;  // viewBox is 718 tall
+        return Math.sqrt(
+          Math.pow(lotSvgX - dest.svgX, 2) +
+          Math.pow(lotSvgY - dest.svgY, 2)
+        );
+      }
+
+      // Estimate walking distance in meters: campus is ~1.5km wide for 460 SVG units
+      function svgDistToMeters(svgDist){
+        return Math.round(svgDist * 3.3);
+      }
+
       function renderResults(){
         const d = DESTS[curDest];
-        const scored = d.lots.map(id => ({id, v: getOcc(id, curPermit, curHour)}))
-                              .sort((a,b) => a.v - b.v);
+
+        // Get all lots with their distance & occupancy
+        const allLots = LOTS.map(lot => ({
+          id:       lot.id,
+          name:     lot.name || lot.id,
+          type:     lot.type || 'surface',
+          dist:     lotDistance(lot, d),
+          occ:      getOcc(lot.id, curPermit, curHour)
+        }));
+
+        // Take the 8 closest lots, then sort by availability (lowest occupancy first)
+        const candidates = allLots
+          .sort((a,b) => a.dist - b.dist)
+          .slice(0, 8)
+          .sort((a,b) => a.occ - b.occ);
+
+        // Update pin dimming: only candidate lots stay bright
+        const candidateIds = new Set(candidates.map(c => c.id));
+        LOTS.forEach(l => {
+          const p = document.getElementById('fp2-pin-' + l.id);
+          if(p) p.classList.toggle('dim', !candidateIds.has(l.id));
+        });
 
         document.getElementById('fp2-empty').style.display = 'none';
         document.getElementById('fp2-results').style.display = 'block';
         document.getElementById('fp2-results-title').textContent = d.l;
         document.getElementById('fp2-results-sub').textContent =
-          HOURS[curHour] + ' · ' + curQuarter + ' · ' + curPermit + ' permit';
+          HOURS[curHour] + ' \u00B7 ' + curQuarter + ' \u00B7 ' + curPermit +
+          ' permit \u00B7 showing 8 closest lots';
 
-        document.getElementById('fp2-cards').innerHTML = scored.map((s, i) => {
-          const vd = verdict(s.v);
-          const pct = Math.round(s.v * 100);
-          const isBest = i === 0 && s.v < 0.78;
-          const col = pinColor(s.v);
+        document.getElementById('fp2-cards').innerHTML = candidates.map((s, i) => {
+          const vd = verdict(s.occ);
+          const pct = Math.round(s.occ * 100);
+          const isBest = i === 0 && s.occ < 0.78;
+          const col = pinColor(s.occ);
+          const meters = svgDistToMeters(s.dist);
+          const walkMin = Math.max(1, Math.round(meters / 80));
+          const structTag = s.type === 'structure'
+            ? '<span style="font-size:9px;background:var(--navy);color:#fff;padding:2px 6px;border-radius:3px;margin-left:6px;text-transform:uppercase;letter-spacing:0.05em">Structure</span>'
+            : '';
           return '<div class="fp2-card' + (isBest ? ' best' : '') + '" onclick="document.getElementById(\'fp2-pin-' + s.id + '\').click()">' +
             '<div class="fp2-card-top">' +
               '<div>' +
-                '<div class="fp2-card-lot">' + s.id + '</div>' +
-                (isBest ? '<div class="fp2-card-best">★ Best option</div>' : '') +
+                '<div class="fp2-card-lot">' + s.name + structTag + '</div>' +
+                (isBest ? '<div class="fp2-card-best">\u2605 Best option</div>' : '') +
               '</div>' +
               '<div class="fp2-card-pct" style="color:' + col + '">' + pct + '%</div>' +
             '</div>' +
-            '<div class="fp2-card-area">' + curPermit + ' permit · ' + d.l + '</div>' +
+            '<div class="fp2-card-area">' + meters + 'm \u00B7 ~' + walkMin + ' min walk \u00B7 ' + curPermit + ' permit</div>' +
             '<div class="fp2-card-bar"><div class="fp2-card-bar-fill" style="width:' + pct + '%;background:' + col + '"></div></div>' +
             '<div class="fp2-verdict ' + vd.cls + '">' + vd.label + '</div>' +
             '<div class="fp2-card-desc">' + vd.desc + ' at ' + HOURS[curHour] + '</div>' +
           '</div>';
         }).join('');
 
+        const best = candidates[0];
         document.getElementById('fp2-disclaimer').innerHTML =
-          '⚠️ Historical averages · Not real-time · ' +
-          (scored.length && scored[0].v < 0.78 ? '<strong>' + scored[0].id + '</strong> is the best option' : 'All nearby lots are likely full');
+          '\u26A0\uFE0F Historical averages \u00B7 Not real-time \u00B7 ' +
+          (best && best.occ < 0.78 ? '<strong>' + best.name + '</strong> looks best' : 'All nearby lots are likely full');
       }
 
       // Build permit chips
