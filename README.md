@@ -2,7 +2,7 @@
 
 One of the most common frustrations for myself during my time at San Diego was driving and finding parking.
 
-This project started as a data cleaning challenge and grew into a full interactive web dashboard with a machine learning model behind it. By the end, it became a tool that lets any UCSD commuter enter their destination, arrival time, and permit type, and get a ranked prediction of which nearby lots are most likely to have open spaces.
+This project started as a data visualization challenge and transformed into a full interactive web dashboard with a machine learning model behind it. By the end, it became a tool that lets any UCSD commuter enter their destination, arrival time, and permit type, and get a ranked prediction of which nearby lots are most likely to have open spaces.
 
 ---
 
