@@ -62,7 +62,7 @@ A correlation matrix of the hourly stall counts confirmed strong positive correl
 
 ## The Machine Learning Model
 
-The model frames the prediction as a **binary classification problem**: given a lot, permit type, arrival hour, and academic quarter — will a spot be available? A spot is defined as available when occupancy is below 90%.
+The model frames the prediction as a **binary classification problem**: given a lot, permit type, arrival hour, and academic quarter will a spot be available? A spot is defined as available when occupancy is below 90%.
 
 Three models were tested and compared using 5-fold stratified cross-validation:
 
@@ -76,7 +76,7 @@ Three models were tested and compared using 5-fold stratified cross-validation:
 
 Feature importance analysis from the Random Forest revealed that **hour of day** and **campus location** are the two strongest predictors, followed by academic quarter and permit type. This makes intuitive sense: the time of day drives the core occupancy curve, and different parts of campus have very different baseline demand.
 
-Once the winning model was selected, it was used to generate a **pre-computed prediction table**: one predicted occupancy probability for every combination of lot, permit type, hour, and season. That table — roughly 3,240 entries — is what gets embedded directly into the dashboard. The model itself never runs in the browser.
+Once the winning model was selected, it was used to generate a **pre-computed prediction table**: one predicted occupancy probability for every combination of lot, permit type, hour, and season. That table containing roughly 3,240 entries is what gets embedded directly into the dashboard. The model itself never runs in the browser.
 
 ---
 
@@ -98,7 +98,7 @@ An **About** tab documents the data source, permit type definitions, and known l
 
 ## Challenges and Limitations
 
-**One survey day per quarter** is the most significant constraint. The model learns historical patterns, not real-time conditions. Events, construction, weather, and exam periods are invisible to it. The accuracy ceiling across all three models sits between 72–74%, and that gap is a data limitation — not an algorithmic one.
+**One survey day per quarter** is the most significant constraint. The model learns historical patterns, not real-time conditions. Events, construction, weather, and exam periods are not taking into consideration. The accuracy ceiling across all three models sits between 72–74%.
 
 **Format drift across six years** required significant reverse-engineering. Each format generation made different assumptions about how to organize lot-level data, and several fields changed names, positions, or granularity between versions.
 
