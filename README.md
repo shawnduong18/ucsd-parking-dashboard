@@ -1,8 +1,8 @@
 # Building a Parking Occupancy Dashboard for UC San Diego
 
-One of the most common frustrations for students and staff at UC San Diego is finding parking. Anyone who has circled a lot for twenty minutes before an 8am class knows the feeling. The question I kept coming back to was: *is there any pattern to this?* And if there is — could that pattern be turned into something useful?
+One of the most common frustrations for myself during my time at San Diego was driving and finding parking.
 
-This project started as a data cleaning challenge and grew into a full interactive web dashboard with a machine learning model underneath it. By the end, it became a tool that lets any UCSD commuter enter their destination, arrival time, and permit type, and get a ranked prediction of which nearby lots are most likely to have open spaces.
+This project started as a data cleaning challenge and grew into a full interactive web dashboard with a machine learning model behind it. By the end, it became a tool that lets any UCSD commuter enter their destination, arrival time, and permit type, and get a ranked prediction of which nearby lots are most likely to have open spaces.
 
 ---
 
