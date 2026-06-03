@@ -143,7 +143,8 @@ let pdSelPermits = [];
 
 // Populate destination dropdown
 (function(){
-  const sel = document.getElementById('pdDest');
+  const sel = document.getElementById("pdDest");
+  if(!sel) return;
   Object.keys(PD_DEST).sort().forEach(d=>{
     const o=document.createElement('option'); o.value=d; o.textContent=d; sel.appendChild(o);
   });
@@ -163,140 +164,21 @@ let pdSelPermits = [];
   });
 })();
 
-// Auto-detect season
+// Auto-detect season (safe - elements may not exist)
 (function(){
-  const m=new Date().getMonth(); // 0-11
+  const m=new Date().getMonth();
   const s=m>=8&&m<=11?'Fall':m>=0&&m<=1?'Winter':m>=2&&m<=4?'Spring':'Summer';
-  document.getElementById('pdSeason').value=s;
-  document.getElementById('pdSeasonBadge').textContent='📅 auto-detected: '+s;
+  const sel=document.getElementById('pdSeason');
+  const bdg=document.getElementById('pdSeasonBadge');
+  if(sel) sel.value=s;
+  if(bdg) bdg.textContent='📅 auto-detected: '+s;
 })();
 
-function pdUpdateTime(){
-  const hi=parseInt(document.getElementById('pdTime').value);
-  document.getElementById('pdTimeLabel').textContent=PD_HOURS[hi];
-}
-
-function pdGetKey(hi,season){ return hi+'_'+season.slice(0,2); }
-
-function pdColor(occ){
-  if(occ<0.5) return '#1d7a5a';
-  if(occ<0.7) return '#b07c0a';
-  if(occ<0.85)return '#c05e1a';
-  return '#c0392b';
-}
-
-function pdLabel(occ){
-  if(occ<0.5) return '🟢 Likely open';
-  if(occ<0.7) return '🟡 Moderate';
-  if(occ<0.85)return '🟠 Getting full';
-  return '🔴 Usually full';
-}
-
-function pdRun(){
-  const dest    = document.getElementById('pdDest').value;
-  const hi      = parseInt(document.getElementById('pdTime').value);
-  const hour    = PD_HOURS[hi];
-  const season  = document.getElementById('pdSeason').value;
-  const permits = pdSelPermits;
-
-  if(!dest)   { alert('Please select a destination.'); return; }
-  if(!permits.length){ alert('Please select at least one permit type.'); return; }
-
-  const key     = pdGetKey(hi, season);
-  const destInfo= PD_DEST[dest];
-  const lots    = destInfo.lots;
-  const area    = destInfo.area;
-
-  // Score each lot
-  const scored = [];
-  lots.forEach(lotId=>{
-    const ld = PD_LOT[lotId];
-    if(!ld) return;
-    permits.forEach(permit=>{
-      const td = ld.types?.[permit];
-      if(!td) return;
-      const entry = td[key];
-      if(!entry) return;
-      // also check if lot already in scored for this permit
-      const existing = scored.find(s=>s.lot===lotId && s.permit===permit);
-      if(!existing) scored.push({
-        lot: lotId, permit,
-        mean: entry.m,
-        std:  entry.s||0,
-        n:    entry.n,
-        avail: Math.max(0, Math.min(1, 1-entry.m)),
-        conf: entry.n >= 5 ? 'high' : entry.n >= 2 ? 'medium' : 'low',
-      });
-    });
-  });
-
-  // If no lot-level data, fall back to area-level
-  if(scored.length === 0){
-    permits.forEach(permit=>{
-      const ad = PD_AREA[area]?.[permit];
-      if(!ad) return;
-      const entry = ad[key];
-      if(!entry) return;
-      scored.push({
-        lot:'Area avg', permit,
-        mean: entry.m||entry.r||0.6,
-        std: entry.s||0, n: entry.n||1,
-        avail: Math.max(0,Math.min(1,1-(entry.r||entry.m||0.6))),
-        conf: 'low', isArea: true,
-      });
-    });
-  }
-
-  if(!scored.length){
-    document.getElementById('pdEmpty').style.display='block';
-    document.getElementById('pdResults').style.display='none';
-    document.getElementById('pdEmpty').querySelector('p').textContent=
-      'No historical data found for this combination. Try a different permit type or destination.';
-    return;
-  }
-
-  // Sort: most available first, then by confidence
-  scored.sort((a,b)=>b.avail-a.avail || (b.conf==='high'?1:-1));
-
-  // Render
-  document.getElementById('pdEmpty').style.display='none';
-  document.getElementById('pdResults').style.display='block';
-  document.getElementById('pdResultsTitle').textContent=`${dest}`;
-  document.getElementById('pdResultsSub').textContent=`${hour} · ${season} · ${permits.join(', ')} permit${permits.length>1?'s':''} · ${scored.length} lot${scored.length!==1?'s':''} found`;
-
-  const cards = document.getElementById('pdCards');
-  cards.innerHTML = scored.slice(0,10).map((s,i)=>{
-    const col = pdColor(s.mean);
-    const barW= Math.round(s.mean*100);
-    const confColor = s.conf==='high'?'#1d7a5a':s.conf==='medium'?'#b07c0a':'#888780';
-    const confText  = s.conf==='high'?'High confidence (5+ surveys)':s.conf==='medium'?'Moderate confidence (2–4 surveys)':'Low confidence (<2 surveys)';
-    return `<div class="result-card">
-      <div class="rc-rank">${i+1}</div>
-      <div class="rc-body">
-        <div class="rc-lot">${s.lot}${s.isArea?' (area average)':''}</div>
-        <div class="rc-types">${s.permit} permit${!s.isArea?' · '+dest+' area':''}</div>
-        <div class="avail-bar-wrap"><div class="avail-bar" style="width:${barW}%;background:${col}"></div></div>
-        <div class="rc-conf"><span class="conf-dot" style="background:${confColor}"></span>${confText}</div>
-      </div>
-      <div class="rc-right">
-        <div class="rc-pct" style="color:${col}">${(s.mean*100).toFixed(0)}%</div>
-        <div class="rc-pct-label">typical occ.</div>
-        <div style="font-size:11px;margin-top:3px">${pdLabel(s.mean)}</div>
-      </div>
-    </div>`;
-  }).join('');
-
-  const topAvail=(1-scored[0].mean)*100;
-  document.getElementById('pdDisclaimer').innerHTML=
-    `<strong>⚠ Reminder:</strong> These predictions are based on historical survey averages (one day per quarter, 2019–2026). `+
-    `Actual occupancy on any given day may vary by ±25–30 percentage points. `+
-    `<br>The <strong>lower the percentage shown, the more likely you are to find a spot.</strong> `+
-    `Your best bet near ${dest} at ${hour} in ${season} is <strong>${scored[0].lot}</strong> `+
-    `(historically ${(scored[0].mean*100).toFixed(0)}% full at this time).`;
-}
 
 
-// ── NAVIGATION ──────────────────────────────────────────────────────────────
+
+
+// ══ NAVIGATION FUNCTIONS ══════════════════════════════════════════════════════
 function showSection(id, btn) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -312,10 +194,6 @@ function showSection(id, btn) {
   } else {
     const nb = document.getElementById('nav-' + id);
     if (nb) nb.classList.add('active');
-    if (btn && !btn.classList.contains('nav-btn')) {
-      const nb2 = document.querySelector('.nav-btn[id="nav-' + id + '"]');
-      if (nb2) nb2.classList.add('active');
-    }
   }
 }
 function toggleTrends(e) {
@@ -332,376 +210,10 @@ function closeTrends() {
   if (menu) menu.classList.remove('open');
   if (trigger) trigger.classList.remove('open');
 }
-document.addEventListener('click', () => closeTrends());
-
-
-// ══ CAMPUS MAP ══════════════════════════════════════════════════════════════
-const CM_HOURS=['8am','9am','10am','11am','12pm','1pm','2pm','3pm','4pm','5pm'];
-const CM_PERMITS=['A','B','S','D','Visitor'];
-const CM_SEASONS=['Fall','Winter','Spring','Summer'];
-let cmP='B',cmS='Fall',cmH=3,cmD='',cmSelLot=null;
-
-const cmOC=v=>v<.5?'#1D9E75':v<.75?'#B07C0A':v<.9?'#C0572A':'#C0392B';
-const cmOL=v=>v<.5?'Likely open':v<.75?'Moderate':v<.9?'Getting full':'Usually full';
-
-const CM_DESTS={
-  geisel: {l:'Geisel / Price Center',x:33,y:47,ls:['P401','P402','P407','P408']},
-  rimac:  {l:'RIMAC / Rady',x:23,y:22,ls:['P303','P308','P309']},
-  warren: {l:'Warren / Sixth',x:59,y:18,ls:['P201','P204','P205']},
-  revelle:{l:'Revelle / Muir',x:16,y:38,ls:['P101','P105','P113']},
-  health: {l:'Health Sciences',x:68,y:35,ls:['P601','P603','P604']},
-  scholars:{l:'Scholars / Mesa',x:55,y:14,ls:['P904','P907','P910']},
-  hopkins:{l:'Hopkins / Mesa',x:14,y:64,ls:['P501','P502','P504']},
-  sio:    {l:'SIO / Scripps',x:11,y:86,ls:['P003','P007','P012']},
-  medical:{l:'Medical / Campus Point',x:73,y:70,ls:['P701','P704','P741']},
-};
-
-const CM_LOTS=[
-  {id:'P101',x:9,y:38,A:[.36,.55,.72,.85,.86,.84,.82,.76,.62,.46],B:[.34,.52,.63,.74,.75,.73,.71,.65,.51,.35]},
-  {id:'P105',x:13,y:35,A:[.34,.53,.70,.83,.84,.82,.80,.74,.60,.44],B:[.32,.50,.61,.72,.73,.71,.69,.63,.49,.33]},
-  {id:'P113',x:17,y:33,A:[.38,.57,.74,.87,.88,.86,.84,.78,.64,.48],B:[.36,.54,.65,.76,.77,.75,.73,.67,.53,.37]},
-  {id:'P116',x:20,y:37,A:[.40,.59,.76,.89,.90,.88,.86,.80,.66,.50],B:[.38,.56,.67,.78,.79,.77,.75,.69,.55,.39]},
-  {id:'P201',x:56,y:16,A:[.42,.62,.80,.94,.95,.93,.91,.84,.70,.53],B:[.40,.60,.72,.85,.86,.84,.82,.75,.61,.45]},
-  {id:'P204',x:62,y:20,A:[.44,.64,.82,.96,.97,.95,.93,.86,.72,.55],B:[.42,.62,.74,.87,.88,.86,.84,.77,.63,.47]},
-  {id:'P205',x:66,y:15,A:[.40,.60,.78,.92,.93,.91,.89,.82,.68,.51],B:[.38,.58,.70,.83,.84,.82,.80,.73,.59,.43]},
-  {id:'P303',x:28,y:22,A:[.31,.48,.64,.76,.77,.75,.73,.68,.54,.40],B:[.29,.46,.62,.74,.75,.73,.71,.66,.52,.38]},
-  {id:'P308',x:34,y:18,A:[.33,.51,.67,.79,.80,.78,.76,.70,.56,.42],B:[.31,.49,.65,.77,.78,.76,.74,.68,.54,.40]},
-  {id:'P309',x:39,y:21,A:[.35,.53,.69,.81,.82,.80,.78,.72,.58,.44],B:[.33,.51,.67,.79,.80,.78,.76,.70,.56,.42]},
-  {id:'P401',x:30,y:47,A:[.37,.56,.75,.88,.89,.87,.85,.79,.65,.49],B:[.36,.54,.65,.77,.78,.76,.74,.68,.54,.38],S:[.22,.40,.58,.68,.67,.65,.64,.58,.46,.34]},
-  {id:'P402',x:36,y:44,A:[.35,.54,.73,.86,.87,.85,.83,.77,.63,.47],B:[.34,.52,.63,.75,.76,.74,.72,.66,.52,.36]},
-  {id:'P407',x:43,y:41,A:[.40,.58,.78,.91,.92,.90,.88,.82,.68,.52],B:[.38,.56,.67,.79,.80,.78,.76,.70,.56,.40]},
-  {id:'P408',x:37,y:37,A:[.42,.61,.79,.93,.94,.92,.90,.83,.69,.53],B:[.40,.58,.69,.81,.82,.80,.78,.72,.58,.42]},
-  {id:'P501',x:10,y:62,A:[.32,.50,.66,.78,.79,.77,.75,.70,.56,.42],B:[.30,.48,.64,.76,.77,.75,.73,.68,.54,.40],S:[.18,.36,.55,.65,.64,.62,.61,.56,.44,.32]},
-  {id:'P502',x:15,y:66,A:[.30,.48,.64,.76,.77,.75,.73,.68,.54,.40],B:[.28,.46,.62,.74,.75,.73,.71,.66,.52,.38]},
-  {id:'P504',x:8,y:69,A:[.28,.46,.62,.74,.75,.73,.71,.66,.52,.38],B:[.26,.44,.60,.72,.73,.71,.69,.64,.50,.36]},
-  {id:'P601',x:65,y:40,A:[.33,.51,.67,.79,.80,.78,.76,.71,.57,.43],Visitor:[.28,.45,.60,.72,.73,.71,.69,.64,.51,.38]},
-  {id:'P603',x:70,y:36,A:[.31,.49,.65,.77,.78,.76,.74,.69,.55,.41],Visitor:[.26,.43,.58,.70,.71,.69,.67,.62,.49,.36]},
-  {id:'P604',x:74,y:42,A:[.29,.47,.63,.75,.76,.74,.72,.67,.53,.39],Visitor:[.24,.41,.56,.68,.69,.67,.65,.60,.47,.34]},
-  {id:'P701',x:69,y:62,A:[.35,.53,.69,.82,.83,.81,.79,.74,.60,.46],Visitor:[.30,.48,.63,.75,.76,.74,.72,.67,.54,.40]},
-  {id:'P704',x:74,y:58,A:[.33,.51,.67,.80,.81,.79,.77,.72,.58,.44]},
-  {id:'P741',x:70,y:68,S:[.44,.63,.79,.88,.88,.88,.87,.83,.75,.70]},
-  {id:'P904',x:54,y:13,A:[.25,.42,.57,.68,.69,.67,.65,.61,.48,.35],B:[.23,.40,.55,.66,.67,.65,.63,.59,.46,.33]},
-  {id:'P907',x:59,y:10,A:[.27,.44,.59,.70,.71,.69,.67,.63,.50,.37],B:[.25,.42,.57,.68,.69,.67,.65,.61,.48,.35]},
-  {id:'P910',x:64,y:14,A:[.29,.46,.61,.72,.73,.71,.69,.65,.52,.39],B:[.27,.44,.59,.70,.71,.69,.67,.63,.50,.37]},
-  {id:'P003',x:7,y:87,B:[.22,.38,.52,.62,.63,.61,.59,.55,.43,.31],Visitor:[.20,.36,.50,.60,.61,.59,.57,.53,.41,.29]},
-  {id:'P007',x:11,y:82,B:[.20,.35,.48,.58,.59,.57,.55,.51,.40,.28]},
-  {id:'P012',x:5,y:91,B:[.21,.37,.50,.60,.61,.59,.57,.53,.41,.29]},
-  {id:'P952',x:26,y:84,A:[.20,.35,.48,.58,.59,.57,.55,.51,.40,.28],B:[.18,.33,.46,.56,.57,.55,.53,.49,.38,.26]},
-  {id:'P960',x:34,y:88,B:[.16,.30,.44,.54,.55,.53,.51,.47,.36,.24]},
-];
-
-function cmGetO(l,p,h){
-  const d=l[p],fb=l.A||l.B||l.Visitor;
-  const base=d?d[h]:(fb?fb[h]*.88:.5);
-  const adj=cmS==='Summer'?-.16:cmS==='Winter'?.06:cmS==='Spring'?-.03:0;
-  return Math.min(1,Math.max(0,base+adj));
-}
-
-function cmInit(){
-  const wrap=document.getElementById('cmWrap');
-  CM_LOTS.forEach(l=>{
-    const p=document.createElement('div');
-    p.className='cm-pin';p.id='cmp-'+l.id;
-    p.style.cssText='left:'+l.x+'%;top:'+l.y+'%';
-    p.onclick=()=>cmSelLotFn(l);
-    wrap.appendChild(p);
-  });
-  const pc=document.getElementById('cmChips');
-  CM_PERMITS.forEach(p=>{
-    const b=document.createElement('button');
-    b.className='cm-chip'+(p===cmP?' cm-on':'');b.textContent=p;
-    b.onclick=()=>{cmP=p;document.querySelectorAll('.cm-chip').forEach(c=>c.classList.remove('cm-on'));b.classList.add('cm-on');cmUpd();};
-    pc.appendChild(b);
-  });
-  const sc=document.getElementById('cmSeasons');
-  CM_SEASONS.forEach(s=>{
-    const b=document.createElement('button');
-    b.className='cm-szb'+(s===cmS?' cm-on':'');b.textContent=s.slice(0,3);
-    b.onclick=()=>{cmS=s;document.querySelectorAll('.cm-szb').forEach(c=>c.classList.remove('cm-on'));b.classList.add('cm-on');cmUpd();};
-    sc.appendChild(b);
-  });
-  cmColPins();
-  document.addEventListener('click',e=>{if(!e.target.closest('.cm-pin')&&!e.target.closest('.cm-tip'))document.getElementById('cmTip').style.display='none';});
-}
-
-function cmColPins(){
-  const dLots=cmD?CM_DESTS[cmD].ls:null;
-  CM_LOTS.forEach(l=>{
-    const p=document.getElementById('cmp-'+l.id);if(!p)return;
-    p.style.background=cmOC(cmGetO(l,cmP,cmH));
-    p.classList.toggle('cm-dim',dLots&&!dLots.includes(l.id));
-  });
-}
-
-function cmSelLotFn(l){
-  document.querySelectorAll('.cm-pin').forEach(p=>p.classList.remove('cm-sel'));
-  document.getElementById('cmp-'+l.id).classList.add('cm-sel');
-  cmSelLot=l;cmShowTip(l);
-}
-
-function cmShowTip(l){
-  const t=document.getElementById('cmTip');
-  t.style.cssText='display:block;left:'+Math.min(l.x+2,62)+'%;top:'+(l.y<60?l.y+5:l.y-40)+'%';
-  document.getElementById('cmTipLot').textContent=l.id;
-  const v=cmGetO(l,cmP,cmH);
-  document.getElementById('cmTipSub').textContent=cmP+' permit · '+cmOL(v)+' · '+Math.round(v*100)+'%';
-  document.getElementById('cmTipBars').innerHTML=CM_HOURS.map((h,i)=>{
-    const pv=cmGetO(l,cmP,i),pct=Math.round(pv*100);
-    return '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px"><span style="font-size:9px;color:var(--color-text-secondary);width:22px">'+h+'</span><div style="flex:1;height:5px;background:var(--color-background-secondary);border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+cmOC(pv)+';border-radius:3px"></div></div><span style="font-size:9px;color:var(--color-text-secondary);width:24px;text-align:right">'+pct+'%</span></div>';
-  }).join('');
-}
-
-function cmUpd(){
-  cmH=parseInt(document.getElementById('cmTime').value);
-  document.getElementById('cmTimeDisp').textContent=CM_HOURS[cmH];
-  cmColPins();if(cmSelLot)cmShowTip(cmSelLot);if(cmD)cmRender();
-}
-
-function cmSearch(){
-  cmD=document.getElementById('cmDest').value;if(!cmD)return;
-  const dr=document.getElementById('cmRing');
-  dr.style.cssText='left:'+CM_DESTS[cmD].x+'%;top:'+CM_DESTS[cmD].y+'%;width:70px;height:70px;margin-left:-35px;margin-top:-35px';
-  cmColPins();cmRender();
-}
-
-function cmRender(){
-  const dest=CM_DESTS[cmD];
-  const lots=dest.ls.map(id=>CM_LOTS.find(l=>l.id===id)).filter(Boolean);
-  const sc=lots.map(l=>({l,v:cmGetO(l,cmP,cmH)})).sort((a,b)=>a.v-b.v);
-  document.getElementById('cmRes').style.display='block';
-  document.getElementById('cmResTitle').textContent='Near '+dest.l+' · '+CM_HOURS[cmH]+' · '+cmS+' · '+cmP+' permit';
-  document.getElementById('cmCards').innerHTML=sc.map(s=>{
-    const pct=Math.round(s.v*100),col=cmOC(s.v);
-    return '<div class="cm-card" onclick="cmSelLotFn(CM_LOTS.find(l=>l.id===\''+s.l.id+'\'))"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12px;font-weight:500;color:var(--color-text-primary)">'+s.l.id+'</span><span style="font-size:13px;font-weight:500;color:'+col+'">'+pct+'%</span></div><div style="font-size:10px;color:var(--color-text-secondary);margin:2px 0 5px">'+cmOL(s.v)+'</div><div style="height:4px;background:var(--color-background-secondary);border-radius:2px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+col+';border-radius:2px"></div></div></div>';
-  }).join('');
-}
-// ══ END CAMPUS MAP ═══════════════════════════════════════════════════════════
-
-
-// ══ FIND PARKING — POLY MAP PREDICTOR ══════════════════════════════════════
-const PD_ZONE_LOTS = {"pz-rimac":["P303","P308","P309"],"pz-warren":["P201","P204","P205"],"pz-scholars":["P904","P907","P910"],"pz-revelle":["P101","P105","P113"],"pz-geisel":["P401","P402","P407","P408"],"pz-rady":["P303","P308"],"pz-health":["P601","P603","P604"],"pz-bio":["P601","P603"],"pz-medical":["P701","P704"],"pz-hopkins":["P501","P502","P504"],"pz-sio":["P003","P007"],"pz-sw":["P952","P960"],"pz-cp":["P741"]};
-const PD_LOT_POSITIONS = {"P303":[12.5,9.8],"P308":[11.9,6.8],"P309":[9.6,15.5],"P310":[8.5,10.5],"P101":[4.1,40.3],"P105":[4.1,42.9],"P113":[8.4,49.5],"P116":[7.5,53.4],"P201":[36.4,37.7],"P204":[30.7,41.8],"P205":[25.7,44.5],"P401":[20.4,54.5],"P402":[13.7,54.6],"P407":[34.9,56.8],"P408":[35.1,61.6],"P501":[9.3,61.9],"P502":[14.9,60.0],"P504":[14.9,66.8],"P508":[21.4,61.0],"P601":[52.6,36.3],"P603":[52.4,45.4],"P604":[50.2,57.9],"P606":[53.9,53.8],"P701":[62.2,47.0],"P704":[61.6,57.6],"P741":[73.8,44.3],"P904":[43.6,41.5],"P907":[43.6,45.4],"P910":[46.4,49.7],"P003":[2.3,76.6],"P007":[1.8,59.7],"P952":[19.8,69.2],"P960":[22.6,73.3]};
-const PD_DEST_SVG = {"geisel":[207,183],"rimac":[146,52],"warren":[300,52],"revelle":[79,183],"health":[466,100],"scholars":[337,55],"hopkins":[79,315],"sio":[65,418]};
-const PD_PERMIT_LIST = ['A','B','S','D','Visitor'];
-const PD_SEASON_LIST = ['Fall','Winter','Spring','Summer'];
-let pdCurPermit = 'B';
-let pdCurSeason = 'Fall';
-
-// Auto-detect season
-(function(){
-  const m = new Date().getMonth();
-  pdCurSeason = m>=8&&m<=11?'Fall':m<=1?'Winter':m<=4?'Spring':'Summer';
-  document.getElementById('pdSeason') && (document.getElementById('pdSeason').value = pdCurSeason);
-})();
-
-function pdGetOcc(lotId, permit, hi){
-  const l = PD_LOT[lotId];
-  if(!l) return 0.6;
-  const entry = l.types?.[permit];
-  if(!entry) return 0.6;
-  const key = hi + '_' + pdCurSeason.slice(0,2);
-  const data = entry[key];
-  if(!data) return 0.6;
-  return data.m != null ? data.m : (data.r || 0.6);
-}
-
-function pdZoneAvg(zoneId){
-  const lots = PD_ZONE_LOTS[zoneId] || [];
-  if(!lots.length) return 0.6;
-  const vals = lots.map(id => pdGetOcc(id, pdCurPermit, parseInt(document.getElementById('pdTime')?.value||3)));
-  return vals.reduce((a,b)=>a+b,0)/vals.length;
-}
-
-function pdZoneFill(v){
-  if(v < 0.5)  return 'rgba(29,158,117,0.38)';
-  if(v < 0.78) return 'rgba(186,117,23,0.38)';
-  return 'rgba(192,57,43,0.38)';
-}
-function pdZoneStroke(v){
-  if(v < 0.5)  return '#15C77A';
-  if(v < 0.78) return '#E09218';
-  return '#E04028';
-}
-function pdPinColor(v){
-  if(v < 0.5)  return '#1D9E75';
-  if(v < 0.78) return '#BA7517';
-  return '#C0392B';
-}
-function pdVerdict(v){
-  if(v < 0.5)  return {label:'Yes',   cls:'v-yes', icon:'✓', desc:'Spot likely available'};
-  if(v < 0.78) return {label:'Maybe', cls:'v-m',   icon:'~', desc:'Limited spots'};
-  return            {label:'No',    cls:'v-n',   icon:'✗', desc:'Usually full'};
-}
-
-function pdColorZones(){
-  const hi = parseInt(document.getElementById('pdTime')?.value || 3);
-  Object.keys(PD_ZONE_LOTS).forEach(zid => {
-    const el = document.getElementById(zid);
-    if(!el) return;
-    const v = pdZoneAvg(zid);
-    el.setAttribute('fill', pdZoneFill(v));
-    el.setAttribute('stroke', pdZoneStroke(v));
-    el.setAttribute('stroke-width','2');
-  });
-}
-
-function pdColorPins(){
-  const hi = parseInt(document.getElementById('pdTime')?.value || 3);
-  const destVal = document.getElementById('pdDest')?.value;
-  const destLots = destVal && PD_DEST[destVal] ? PD_DEST[destVal].lots : null;
-  Object.keys(PD_LOT_POSITIONS).forEach(lotId => {
-    const pin = document.getElementById('pdpin-'+lotId);
-    if(!pin) return;
-    const v = pdGetOcc(lotId, pdCurPermit, hi);
-    pin.style.background = pdPinColor(v);
-    if(destLots) pin.style.opacity = destLots.includes(lotId) ? '1' : '0.18';
-    else pin.style.opacity = '0.85';
-  });
-}
-
-function pdUpdateAll(){
-  pdColorZones();
-  pdColorPins();
-}
-
-function pdUpdateTime(){
-  const hi = parseInt(document.getElementById('pdTime').value);
-  document.getElementById('pdTimeLabel').textContent = PD_HOURS[hi];
-  pdUpdateAll();
-}
-
-function pdRun(){
-  const dest = document.getElementById('pdDest').value;
-  const hi   = parseInt(document.getElementById('pdTime').value);
-  const permits = [pdCurPermit];
-  const season = pdCurSeason;
-
-  if(!dest){ alert('Please select a destination.'); return; }
-
-  // Move destination dot
-  const svgCoords = PD_DEST_SVG[dest];
-  if(svgCoords){
-    const dot = document.getElementById('pdDestDot');
-    if(dot){ dot.setAttribute('cx', svgCoords[0]); dot.setAttribute('cy', svgCoords[1]); }
-  }
-
-  pdUpdateAll();
-
-  const destInfo = PD_DEST[dest];
-  if(!destInfo){ return; }
-  const lots = destInfo.lots || [];
-
-  // Score and sort
-  const scored = lots.map(lotId => {
-    const v = pdGetOcc(lotId, pdCurPermit, hi);
-    return {lotId, v};
-  }).sort((a,b) => a.v - b.v);
-
-  // Render results
-  document.getElementById('pdEmpty').style.display   = 'none';
-  document.getElementById('pdResults').style.display = 'block';
-  document.getElementById('pdResultsTitle').textContent = destInfo.label || dest;
-  document.getElementById('pdResultsSub').textContent =
-    PD_HOURS[hi] + ' · ' + season + ' · ' + pdCurPermit + ' permit';
-
-  const cards = document.getElementById('pdCards');
-  cards.innerHTML = scored.slice(0,6).map((s,i) => {
-    const vd = pdVerdict(s.v);
-    return `<div class="result-card" onclick="pdSelectLot('${s.lotId}')">
-      <div class="rc-rank">${i+1}</div>
-      <div class="rc-body">
-        <div class="rc-lot">${s.lotId}</div>
-        <div class="rc-types">${pdCurPermit} permit</div>
-      </div>
-      <div class="rc-right">
-        <div class="verdict ${vd.cls}">${vd.label}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">${vd.desc}</div>
-      </div>
-    </div>`;
-  }).join('');
-
-  const top = scored[0];
-  document.getElementById('pdDisclaimer').innerHTML =
-    '⚠️ Historical averages only · Not real-time · ' +
-    (top ? 'Best option: <strong>' + top.lotId + '</strong>' : '');
-}
-
-function pdSelectLot(lotId){
-  document.querySelectorAll('#pdPinLayer .pd-pin').forEach(p => p.style.transform = 'translate(-50%,-50%)');
-  const pin = document.getElementById('pdpin-'+lotId);
-  if(pin) pin.style.transform = 'translate(-50%,-50%) scale(1.8)';
-}
-
-// Build permit chips
-(function pdBuildChips(){
-  const pp = document.getElementById('pdPermits');
-  if(!pp) return;
-  pp.innerHTML = '';
-  PD_PERMIT_LIST.forEach(p => {
-    const b = document.createElement('button');
-    b.className = 'tg-btn' + (p === pdCurPermit ? ' on' : '');
-    b.textContent = p;
-    if(p === pdCurPermit) b.style.cssText = 'background:var(--navy);color:#fff;border-color:var(--navy)';
-    b.onclick = () => {
-      pdCurPermit = p;
-      document.querySelectorAll('#pdPermits .tg-btn').forEach(x => {
-        x.classList.remove('on');
-        x.style.background = '';
-        x.style.color = '';
-        x.style.borderColor = '';
-      });
-      b.classList.add('on');
-      b.style.cssText = 'background:var(--navy);color:#fff;border-color:var(--navy)';
-      pdUpdateAll();
-    };
-    pp.appendChild(b);
-  });
-
-  // Build season chips
-  const ps = document.getElementById('pdSeasons');
-  if(!ps) return;
-  ps.innerHTML = '';
-  PD_SEASON_LIST.forEach(s => {
-    const b = document.createElement('button');
-    b.className = 'tg-btn' + (s === pdCurSeason ? ' on' : '');
-    b.textContent = s;
-    if(s === pdCurSeason) b.style.cssText = 'background:var(--navy);color:#fff;border-color:var(--navy)';
-    b.onclick = () => {
-      pdCurSeason = s;
-      document.querySelectorAll('#pdSeasons .tg-btn').forEach(x => {
-        x.classList.remove('on');
-        x.style.background = '';
-        x.style.color = '';
-        x.style.borderColor = '';
-      });
-      b.classList.add('on');
-      b.style.cssText = 'background:var(--navy);color:#fff;border-color:var(--navy)';
-      pdUpdateAll();
-    };
-    ps.appendChild(b);
-  });
-
-  // Build lot pins in pin layer
-  const layer = document.getElementById('pdPinLayer');
-  if(!layer) return;
-  layer.innerHTML = '';
-  Object.entries(PD_LOT_POSITIONS).forEach(([lotId, [x,y]]) => {
-    const pin = document.createElement('div');
-    pin.className = 'pd-pin';
-    pin.id = 'pdpin-' + lotId;
-    pin.style.cssText = 'position:absolute;width:11px;height:11px;border-radius:50%;' +
-      'border:2px solid rgba(255,255,255,0.9);cursor:pointer;' +
-      'transform:translate(-50%,-50%);transition:transform .12s;z-index:5;' +
-      'box-shadow:0 1px 3px rgba(0,0,0,0.35);left:'+x+'%;top:'+y+'%';
-    pin.title = lotId;
-    pin.onclick = () => pdSelectLot(lotId);
-    layer.appendChild(pin);
-  });
-
-  pdUpdateAll();
-})();
-// ══ END FIND PARKING ════════════════════════════════════════════════════════
-
+document.addEventListener('click', function(e) {
+  const dd = document.getElementById('trendsDropdown');
+  if (dd && !dd.contains(e.target)) closeTrends();
+});
 </script>
 <style>
   :root {
@@ -1385,22 +897,70 @@ function pdSelectLot(lotId){
   </section>
 
 
-  <!-- ══ FIND PARKING ══ -->
+  
+  <!-- ══ FIND PARKING — CLEAN REBUILD ══ -->
   <section id="s-lots" class="section active">
     <div class="section-header">
       <div class="section-tag">Predictive tool · Survey data 2019–2026</div>
       <h2>Find Parking</h2>
-      <p>Select your destination, arrival time, and permit type. Zone colors update live to show predicted availability.</p>
+      <p>Select destination, arrival time, and permit type. Zone colors update live to show predicted availability.</p>
     </div>
 
-    <div class="pred-grid">
-      <div class="pred-sidebar">
-        <div class="pred-panel">
-          <div class="pred-panel-title">Your Trip</div>
-          <div class="form-group">
-            <label class="form-label">Destination on campus</label>
-            <select id="pdDest" class="form-select">
-              <option value="">— select destination —</option>
+    <style>
+      .fp2-grid{display:grid;grid-template-columns:300px 1fr;gap:1.5rem}
+      @media (max-width:900px){.fp2-grid{grid-template-columns:1fr}}
+      .fp2-panel{background:#fff;border:1px solid var(--cream2);border-radius:8px;padding:1.25rem;margin-bottom:1rem}
+      .fp2-panel-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:1rem;font-weight:600}
+      .fp2-fg{margin-bottom:1rem}
+      .fp2-label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;font-weight:500}
+      .fp2-select{width:100%;padding:.5rem .65rem;font-size:13px;border:1px solid var(--cream2);border-radius:6px;background:#fff;color:var(--ink);font-family:inherit}
+      .fp2-slider{width:100%;margin:.5rem 0}
+      .fp2-time{font-size:24px;font-weight:500;color:var(--navy);font-family:'DM Mono',monospace}
+      .fp2-chips{display:flex;flex-wrap:wrap;gap:.35rem}
+      .fp2-chip{font-size:12px;padding:.35rem .75rem;border-radius:20px;border:1px solid var(--cream2);background:#fff;color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit}
+      .fp2-chip:hover{border-color:var(--sand);color:var(--ink)}
+      .fp2-chip.on{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:500}
+      .fp2-btn{width:100%;padding:.65rem 1rem;background:var(--navy);color:var(--gold2);border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.02em;font-family:inherit;margin-top:.5rem}
+      .fp2-btn:hover{background:var(--navy2)}
+      .fp2-map-wrap{position:relative;background:#EDE8DB;border-radius:8px;overflow:hidden;margin-bottom:1rem;border:1px solid var(--cream2)}
+      .fp2-pin{position:absolute;width:11px;height:11px;border-radius:50%;border:2px solid rgba(255,255,255,0.92);cursor:pointer;transform:translate(-50%,-50%);transition:transform .15s;z-index:5;box-shadow:0 1px 3px rgba(0,0,0,0.4)}
+      .fp2-pin:hover{transform:translate(-50%,-50%) scale(1.7);z-index:8}
+      .fp2-pin.sel{transform:translate(-50%,-50%) scale(1.9);box-shadow:0 0 0 2px #fff,0 0 0 4px var(--navy);z-index:9}
+      .fp2-pin.dim{opacity:.18}
+      .fp2-empty{padding:2rem 1.5rem;text-align:center;background:var(--cream);border-radius:8px;border:1px dashed var(--cream2)}
+      .fp2-empty-icon{font-size:32px;margin-bottom:.5rem;opacity:.5}
+      .fp2-empty p{color:var(--muted);font-size:13px;margin:0}
+      .fp2-results-head{margin-bottom:1rem}
+      .fp2-results-title{font-size:16px;font-weight:600;color:var(--ink);margin-bottom:.25rem}
+      .fp2-results-sub{font-size:12px;color:var(--muted)}
+      .fp2-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.75rem}
+      .fp2-card{background:#fff;border:1px solid var(--cream2);border-radius:8px;padding:1rem;transition:border-color .15s;cursor:pointer}
+      .fp2-card:hover{border-color:var(--sand)}
+      .fp2-card.best{border-color:#1d7a5a;border-width:2px;padding:calc(1rem - 1px)}
+      .fp2-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem}
+      .fp2-card-lot{font-size:15px;font-weight:600;color:var(--ink);font-family:'DM Mono',monospace}
+      .fp2-card-best{font-size:10px;color:#1d7a5a;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-top:2px}
+      .fp2-card-pct{font-size:18px;font-weight:600;font-family:'DM Mono',monospace}
+      .fp2-card-area{font-size:11px;color:var(--muted);margin-bottom:.5rem}
+      .fp2-card-bar{height:5px;background:var(--cream);border-radius:3px;overflow:hidden;margin-bottom:.5rem}
+      .fp2-card-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+      .fp2-verdict{display:inline-flex;align-items:center;gap:.35rem;padding:.25rem .65rem;border-radius:6px;font-size:12px;font-weight:600}
+      .v-yes{background:#D4F0E3;color:#0A6B40}
+      .v-maybe{background:#FAE8C0;color:#7A4A08}
+      .v-no{background:#FCDCDC;color:#8B1A1A}
+      .fp2-card-desc{font-size:11px;color:var(--muted);margin-top:.4rem}
+      .fp2-disclaimer{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--cream2)}
+    </style>
+
+    <div class="fp2-grid">
+      <!-- ── LEFT: Controls ── -->
+      <div>
+        <div class="fp2-panel">
+          <div class="fp2-panel-title">Your Trip</div>
+          <div class="fp2-fg">
+            <label class="fp2-label">Destination</label>
+            <select id="fp2-dest" class="fp2-select">
+              <option value="">— Choose destination —</option>
               <option value="geisel">Geisel Library / Price Center</option>
               <option value="rimac">RIMAC / Rady School</option>
               <option value="warren">Warren / Sixth / Marshall</option>
@@ -1411,252 +971,335 @@ function pdSelectLot(lotId){
               <option value="sio">SIO / Scripps</option>
             </select>
           </div>
-          <div class="form-group">
-            <label class="form-label">Arrival time</label>
-            <input type="range" id="pdTime" class="time-slider" min="0" max="9" value="3" oninput="pdUpdateTime()">
-            <div class="time-display" id="pdTimeLabel">11am</div>
+          <div class="fp2-fg">
+            <label class="fp2-label">Arrival time</label>
+            <div class="fp2-time" id="fp2-time-display">11am</div>
+            <input type="range" min="0" max="9" value="3" id="fp2-time" class="fp2-slider">
           </div>
-          <div class="form-group">
-            <label class="form-label">Permit type</label>
-            <div class="permit-chips" id="pdPermits"></div>
+          <div class="fp2-fg">
+            <label class="fp2-label">Permit type</label>
+            <div class="fp2-chips" id="fp2-permits"></div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Academic quarter</label>
-            <div class="permit-chips" id="pdSeasons"></div>
+          <div class="fp2-fg">
+            <label class="fp2-label">Academic quarter</label>
+            <div class="fp2-chips" id="fp2-quarters"></div>
           </div>
-          <button class="pred-btn" onclick="pdRun()">Find Available Spots</button>
+          <button class="fp2-btn" id="fp2-find-btn">Find Available Spots</button>
         </div>
-        <div class="pred-panel" style="background:var(--cream);border-color:var(--cream2)">
-          <div class="pred-panel-title">How it works</div>
+        <div class="fp2-panel" style="background:var(--cream);border-color:var(--cream2)">
+          <div class="fp2-panel-title">How it works</div>
           <div style="font-size:12px;color:var(--muted);line-height:1.7">
-            Zones color green, amber, or red based on <strong style="color:var(--ink)">historical survey averages</strong>.
-            <br><br><strong style="color:var(--red)">Not real-time.</strong> Expect ±25% variation.
+            Zone colors and lot pins update <strong style="color:var(--ink)">live</strong> based on historical survey averages.
+            <br><br>
+            Green = likely open · Amber = limited · Red = usually full
+            <br><br>
+            <strong style="color:var(--red)">Not real-time.</strong> Expect ±25% variation on any given day.
           </div>
         </div>
       </div>
 
-      <div class="pred-main">
-        <!-- MAP -->
-        <div class="chart-card" style="padding:0;overflow:hidden;margin-bottom:1.25rem;position:relative">
-          <svg id="campusSVG" width="100%" viewBox="0 0 680 520" style="display:block">
-
-            <!-- ── BASE GROUND ── -->
+      <!-- ── RIGHT: Map + Results ── -->
+      <div>
+        <div class="fp2-map-wrap">
+          <svg width="100%" viewBox="0 0 680 520" style="display:block">
             <rect width="680" height="520" fill="#EDE8DB"/>
-
-            <!-- ── CANYON / NATURAL AREA ── -->
-            <path d="M90,8 Q75,45 70,90 Q65,138 73,175 Q81,212 73,250
-                     Q65,288 73,322 Q81,356 73,390 Q65,424 72,460
-                     L88,460 Q96,420 88,385 Q80,350 90,312 Q100,274 88,236
-                     Q76,198 88,158 Q100,118 88,78 Q78,48 90,8 Z"
-                  fill="#B5C98A" opacity="0.8"/>
-            <path d="M90,8 Q105,45 100,88 Q95,131 105,168 Q115,205 103,244
-                     Q91,283 103,318 Q115,353 103,390 Q91,427 98,460
-                     L88,460 Q80,427 73,390 Q65,353 73,322 Q81,291 73,255
-                     Q65,219 73,180 Q81,141 73,100 Q65,59 75,8 Z"
-                  fill="#A8BF7E" opacity="0.6"/>
-
-            <!-- ── RIMAC ATHLETIC FIELDS ── -->
+            <!-- Canyon -->
+            <path d="M90,8 Q75,45 70,90 Q65,138 73,175 Q81,212 73,250 Q65,288 73,322 Q81,356 73,390 Q65,424 72,460 L88,460 Q96,420 88,385 Q80,350 90,312 Q100,274 88,236 Q76,198 88,158 Q100,118 88,78 Q78,48 90,8 Z" fill="#B5C98A" opacity="0.8"/>
+            <!-- RIMAC fields -->
             <rect x="73" y="8" width="146" height="92" rx="2" fill="#72A040" opacity="0.88"/>
             <line x1="146" y1="8" x2="146" y2="100" stroke="#619035" stroke-width="0.8" opacity="0.5"/>
             <line x1="73" y1="52" x2="219" y2="52" stroke="#619035" stroke-width="0.8" opacity="0.5"/>
-            <ellipse cx="108" cy="52" rx="25" ry="34" fill="none" stroke="#619035" stroke-width="0.8" opacity="0.4"/>
-            <ellipse cx="184" cy="52" rx="25" ry="34" fill="none" stroke="#619035" stroke-width="0.8" opacity="0.4"/>
-
-            <!-- ── SMALLER GREEN PATCHES ── -->
+            <!-- Small green patches -->
             <ellipse cx="340" cy="55" rx="28" ry="40" fill="#C4D89C" opacity="0.65"/>
-            <circle cx="460" cy="35" r="18" fill="#C8DCA0" opacity="0.5"/>
-
-            <!-- ── OCEAN / CLIFFS (far left) ── -->
-            <path d="M0,8 Q12,80 10,160 Q8,240 12,320 Q16,400 10,480 L0,480 Z"
-                  fill="#D8E8F0" opacity="0.4"/>
-
-            <!-- ── BUILDING CLUSTERS (texture) ── -->
-            <!-- Revelle/Muir -->
-            <g opacity="0.7">
-              <rect x="36" y="112" width="22" height="14" rx="1" fill="#CBC3B8"/>
-              <rect x="62" y="112" width="18" height="14" rx="1" fill="#CBC3B8"/>
-              <rect x="84" y="112" width="24" height="14" rx="1" fill="#CBC3B8"/>
-              <rect x="36" y="130" width="30" height="12" rx="1" fill="#CBC3B8"/>
-              <rect x="70" y="130" width="20" height="12" rx="1" fill="#CBC3B8"/>
-              <rect x="94" y="130" width="16" height="12" rx="1" fill="#CBC3B8"/>
-              <rect x="36" y="146" width="38" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="78" y="146" width="28" height="16" rx="1" fill="#CBC3B8"/>
+            <!-- Building clusters -->
+            <g opacity="0.7" fill="#CBC3B8">
+              <rect x="36" y="112" width="22" height="14" rx="1"/><rect x="62" y="112" width="18" height="14" rx="1"/>
+              <rect x="84" y="112" width="24" height="14" rx="1"/><rect x="36" y="130" width="30" height="12" rx="1"/>
+              <rect x="70" y="130" width="20" height="12" rx="1"/><rect x="94" y="130" width="16" height="12" rx="1"/>
+              <rect x="36" y="146" width="38" height="16" rx="1"/><rect x="78" y="146" width="28" height="16" rx="1"/>
+              <rect x="138" y="112" width="32" height="18" rx="1"/><rect x="175" y="112" width="28" height="18" rx="1"/>
+              <rect x="208" y="112" width="20" height="18" rx="1"/><rect x="232" y="112" width="26" height="18" rx="1"/>
+              <rect x="138" y="135" width="24" height="20" rx="1"/><rect x="167" y="135" width="36" height="20" rx="1"/>
+              <rect x="208" y="135" width="28" height="20" rx="1"/><rect x="138" y="160" width="44" height="22" rx="1"/>
+              <rect x="187" y="160" width="30" height="22" rx="1"/><rect x="222" y="160" width="22" height="22" rx="1"/>
+              <rect x="236" y="12" width="28" height="16" rx="1"/><rect x="269" y="12" width="34" height="16" rx="1"/>
+              <rect x="308" y="12" width="26" height="16" rx="1"/><rect x="339" y="12" width="28" height="16" rx="1"/>
+              <rect x="236" y="32" width="24" height="18" rx="1"/><rect x="265" y="32" width="38" height="18" rx="1"/>
+              <rect x="308" y="32" width="32" height="18" rx="1"/><rect x="236" y="55" width="32" height="16" rx="1"/>
+              <rect x="273" y="55" width="26" height="16" rx="1"/><rect x="304" y="55" width="34" height="16" rx="1"/>
+              <rect x="344" y="55" width="22" height="16" rx="1"/>
+              <rect x="36" y="264" width="28" height="16" rx="1"/><rect x="69" y="264" width="34" height="16" rx="1"/>
+              <rect x="36" y="285" width="22" height="18" rx="1"/><rect x="63" y="285" width="38" height="18" rx="1"/>
+              <rect x="36" y="308" width="30" height="20" rx="1"/><rect x="71" y="308" width="28" height="20" rx="1"/>
+              <rect x="398" y="12" width="30" height="16" rx="1"/><rect x="433" y="12" width="34" height="16" rx="1"/>
+              <rect x="472" y="12" width="28" height="16" rx="1"/><rect x="505" y="12" width="22" height="16" rx="1"/>
+              <rect x="398" y="33" width="36" height="20" rx="1"/><rect x="440" y="33" width="30" height="20" rx="1"/>
+              <rect x="476" y="33" width="48" height="20" rx="1"/><rect x="398" y="58" width="28" height="18" rx="1"/>
+              <rect x="431" y="58" width="36" height="18" rx="1"/><rect x="473" y="58" width="52" height="18" rx="1"/>
+              <rect x="398" y="82" width="38" height="18" rx="1"/><rect x="441" y="82" width="30" height="18" rx="1"/>
+              <rect x="476" y="82" width="50" height="18" rx="1"/>
+              <rect x="398" y="262" width="36" height="20" rx="1"/><rect x="440" y="262" width="30" height="20" rx="1"/>
+              <rect x="476" y="262" width="50" height="20" rx="1"/><rect x="398" y="287" width="28" height="20" rx="1"/>
+              <rect x="431" y="287" width="40" height="20" rx="1"/><rect x="476" y="287" width="50" height="20" rx="1"/>
+              <rect x="18" y="388" width="28" height="16" rx="1"/><rect x="51" y="388" width="22" height="16" rx="1"/>
+              <rect x="78" y="388" width="28" height="16" rx="1"/><rect x="18" y="409" width="34" height="28" rx="1"/>
+              <rect x="57" y="409" width="44" height="28" rx="1"/>
             </g>
-            <!-- Price Center / Geisel -->
-            <g opacity="0.7">
-              <rect x="138" y="112" width="32" height="18" rx="1" fill="#CBC3B8"/>
-              <rect x="175" y="112" width="28" height="18" rx="1" fill="#CBC3B8"/>
-              <rect x="208" y="112" width="20" height="18" rx="1" fill="#CBC3B8"/>
-              <rect x="232" y="112" width="26" height="18" rx="1" fill="#CBC3B8"/>
-              <rect x="138" y="135" width="24" height="20" rx="1" fill="#CBC3B8"/>
-              <rect x="167" y="135" width="36" height="20" rx="1" fill="#CBC3B8"/>
-              <rect x="208" y="135" width="28" height="20" rx="1" fill="#CBC3B8"/>
-              <rect x="138" y="160" width="44" height="22" rx="1" fill="#CBC3B8"/>
-              <rect x="187" y="160" width="30" height="22" rx="1" fill="#CBC3B8"/>
-              <rect x="222" y="160" width="22" height="22" rx="1" fill="#CBC3B8"/>
-            </g>
-            <!-- Warren/Sixth -->
-            <g opacity="0.7">
-              <rect x="236" y="12" width="28" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="269" y="12" width="34" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="308" y="12" width="26" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="339" y="12" width="28" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="236" y="32" width="24" height="18" rx="1" fill="#CBC3B8"/>
-              <rect x="265" y="32" width="38" height="18" rx="1" fill="#CBC3B8"/>
-              <rect x="308" y="32" width="32" height="18" rx="1" fill="#CBC3B8"/>
-              <rect x="236" y="55" width="32" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="273" y="55" width="26" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="304" y="55" width="34" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="344" y="55" width="22" height="16" rx="1" fill="#CBC3B8"/>
-            </g>
-            <!-- Hopkins -->
-            <g opacity="0.7">
-              <rect x="36" y="264" width="28" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="69" y="264" width="34" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="36" y="285" width="22" height="18" rx="1" fill="#CBC3B8"/>
-              <rect x="63" y="285" width="38" height="18" rx="1" fill="#CBC3B8"/>
-              <rect x="36" y="308" width="30" height="20" rx="1" fill="#CBC3B8"/>
-              <rect x="71" y="308" width="28" height="20" rx="1" fill="#CBC3B8"/>
-            </g>
-            <!-- Health Sciences -->
-            <g opacity="0.7">
-              <rect x="398" y="12" width="30" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="433" y="12" width="34" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="472" y="12" width="28" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="505" y="12" width="22" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="398" y="33" width="36" height="20" rx="1" fill="#CBC3B8"/>
-              <rect x="440" y="33" width="30" height="20" rx="1" fill="#CBC3B8"/>
-              <rect x="476" y="33" width="48" height="20" rx="1" fill="#CBC3B8"/>
-              <rect x="398" y="58" width="28" height="18" rx="1" fill="#CBC3B8"/>
-              <rect x="431" y="58" width="36" height="18" rx="1" fill="#CBC3B8"/>
-              <rect x="473" y="58" width="52" height="18" rx="1" fill="#CBC3B8"/>
-              <rect x="398" y="82" width="38" height="18" rx="1" fill="#CBC3B8"/>
-              <rect x="441" y="82" width="30" height="18" rx="1" fill="#CBC3B8"/>
-              <rect x="476" y="82" width="50" height="18" rx="1" fill="#CBC3B8"/>
-            </g>
-            <!-- Medical Center -->
-            <g opacity="0.7">
-              <rect x="398" y="262" width="36" height="20" rx="1" fill="#CBC3B8"/>
-              <rect x="440" y="262" width="30" height="20" rx="1" fill="#CBC3B8"/>
-              <rect x="476" y="262" width="50" height="20" rx="1" fill="#CBC3B8"/>
-              <rect x="398" y="287" width="28" height="20" rx="1" fill="#CBC3B8"/>
-              <rect x="431" y="287" width="40" height="20" rx="1" fill="#CBC3B8"/>
-              <rect x="476" y="287" width="50" height="20" rx="1" fill="#CBC3B8"/>
-            </g>
-            <!-- SIO -->
-            <g opacity="0.7">
-              <rect x="18" y="388" width="28" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="51" y="388" width="22" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="78" y="388" width="28" height="16" rx="1" fill="#CBC3B8"/>
-              <rect x="18" y="409" width="34" height="28" rx="1" fill="#CBC3B8"/>
-              <rect x="57" y="409" width="44" height="28" rx="1" fill="#CBC3B8"/>
-            </g>
-            <!-- Campus Point -->
-            <g opacity="0.65">
-              <rect x="548" y="220" width="50" height="28" rx="1" fill="#CBC3B8"/>
-              <rect x="603" y="220" width="42" height="28" rx="1" fill="#CBC3B8"/>
-              <rect x="548" y="254" width="44" height="26" rx="1" fill="#CBC3B8"/>
-              <rect x="597" y="254" width="50" height="26" rx="1" fill="#CBC3B8"/>
-              <rect x="548" y="286" width="38" height="26" rx="1" fill="#CBC3B8"/>
-              <rect x="591" y="286" width="56" height="26" rx="1" fill="#CBC3B8"/>
-            </g>
-
-            <!-- ── ROAD NETWORK ── -->
-            <!-- Genesee Ave (top) -->
+            <!-- Roads -->
             <rect x="0" y="0" width="680" height="12" fill="#C6BFB2"/>
-            <text x="340" y="9" text-anchor="middle" font-size="7" font-family="sans-serif" fill="#8A8272" font-weight="600">GENESEE AVE</text>
-            <!-- La Jolla Village Dr (bottom) -->
+            <text x="340" y="9" text-anchor="middle" font-size="7" fill="#8A8272" font-weight="600">GENESEE AVE</text>
             <rect x="0" y="508" width="680" height="12" fill="#C6BFB2"/>
-            <text x="280" y="517" text-anchor="middle" font-size="7" font-family="sans-serif" fill="#8A8272" font-weight="600">LA JOLLA VILLAGE DRIVE</text>
-            <!-- N. Torrey Pines Rd (left) -->
+            <text x="280" y="517" text-anchor="middle" font-size="7" fill="#8A8272" font-weight="600">LA JOLLA VILLAGE DRIVE</text>
             <path d="M26,8 Q24,130 28,260 Q32,390 26,508" stroke="#C6BFB2" stroke-width="7" fill="none"/>
             <path d="M26,8 Q24,130 28,260 Q32,390 26,508" stroke="#D4CEC4" stroke-width="5" fill="none"/>
-            <text x="22" y="220" font-size="7" font-family="sans-serif" fill="#8A8272" font-weight="600" transform="rotate(-90,22,220)">N. TORREY PINES RD</text>
-            <!-- Gilman Drive -->
-            <path d="M26,108 Q100,103 160,106 Q220,109 280,104 Q340,99 386,103" stroke="#C6BFB2" stroke-width="6" fill="none"/>
-            <path d="M26,108 Q100,103 160,106 Q220,109 280,104 Q340,99 386,103" stroke="#D4CEC4" stroke-width="4" fill="none"/>
-            <text x="210" y="100" text-anchor="middle" font-size="7" font-family="sans-serif" fill="#8A8272" font-weight="500">GILMAN DRIVE</text>
-            <!-- Hopkins Drive -->
+            <path d="M26,108 Q160,103 280,104 Q340,99 386,103" stroke="#C6BFB2" stroke-width="6" fill="none"/>
+            <path d="M26,108 Q160,103 280,104 Q340,99 386,103" stroke="#D4CEC4" stroke-width="4" fill="none"/>
+            <text x="210" y="100" text-anchor="middle" font-size="7" fill="#8A8272">GILMAN DRIVE</text>
             <path d="M26,258 Q80,253 132,256 Q180,259 228,254" stroke="#C6BFB2" stroke-width="5" fill="none"/>
             <path d="M26,258 Q80,253 132,256 Q180,259 228,254" stroke="#D4CEC4" stroke-width="3.5" fill="none"/>
-            <text x="130" y="250" text-anchor="middle" font-size="7" font-family="sans-serif" fill="#8A8272" font-weight="500">HOPKINS DRIVE</text>
-            <!-- Internal campus roads -->
-            <path d="M132,108 Q130,180 134,258" stroke="#D4CEC4" stroke-width="3.5" fill="none"/>
-            <path d="M228,8  Q226,55  230,108" stroke="#D4CEC4" stroke-width="3.5" fill="none"/>
-            <path d="M284,8  Q282,55  286,108" stroke="#D4CEC4" stroke-width="3.5" fill="none"/>
-            <path d="M284,108 Q282,175 286,210" stroke="#D4CEC4" stroke-width="3" fill="none"/>
-            <path d="M228,108 Q226,175 230,210" stroke="#D4CEC4" stroke-width="3" fill="none"/>
-            <!-- Health Sciences internal -->
-            <path d="M398,108 Q396,160 400,210 Q404,260 398,310" stroke="#D4CEC4" stroke-width="3" fill="none"/>
-            <path d="M458,8   Q456,55  460,108 Q464,160 458,210" stroke="#D4CEC4" stroke-width="3" fill="none"/>
-            <path d="M518,8   Q516,55  520,108" stroke="#D4CEC4" stroke-width="3" fill="none"/>
-            <path d="M398,108 Q456,104 518,108" stroke="#D4CEC4" stroke-width="3" fill="none"/>
-            <path d="M398,208 Q456,204 536,208" stroke="#D4CEC4" stroke-width="3" fill="none"/>
-            <!-- I-5 Freeway (diagonal, prominent) -->
+            <text x="130" y="250" text-anchor="middle" font-size="7" fill="#8A8272">HOPKINS DRIVE</text>
+            <!-- I-5 -->
             <path d="M390,0 L396,520" stroke="#B8B0A4" stroke-width="16" fill="none"/>
             <path d="M390,0 L396,520" stroke="#C8C0B4" stroke-width="12" fill="none"/>
             <path d="M393,0 L399,520" stroke="rgba(255,220,60,0.5)" stroke-width="1.5" stroke-dasharray="14,10" fill="none"/>
-            <text x="393" y="260" text-anchor="middle" font-size="7" font-family="sans-serif" fill="#7A7268" font-weight="700" transform="rotate(-90,393,260)">I-5 SAN DIEGO FWY</text>
+            <text x="393" y="260" text-anchor="middle" font-size="7" fill="#7A7268" font-weight="700" transform="rotate(-90,393,260)">I-5 SAN DIEGO FWY</text>
 
-            <!-- ── ZONE POLYGONS (colored by JS) ── -->
-            <polygon id="pz-rimac"    points="73,8 219,8 219,100 73,100"    fill="transparent" stroke="none" stroke-width="2"/>
-            <polygon id="pz-warren"   points="222,8 386,8 386,100 222,100"  fill="transparent" stroke="none" stroke-width="2"/>
-            <polygon id="pz-scholars" points="288,8 386,8 386,100 288,100"  fill="transparent" stroke="none" stroke-width="2"/>
-            <polygon id="pz-revelle"  points="28,108 130,108 130,258 28,258" fill="transparent" stroke="none" stroke-width="2"/>
-            <polygon id="pz-geisel"   points="132,108 282,108 282,258 132,258" fill="transparent" stroke="none" stroke-width="2"/>
-            <polygon id="pz-rady"     points="286,108 386,108 386,210 286,210" fill="transparent" stroke="none" stroke-width="2"/>
-            <polygon id="pz-health"   points="398,8 534,8 534,210 398,210"  fill="transparent" stroke="none" stroke-width="2"/>
-            <polygon id="pz-bio"      points="398,210 534,210 534,340 398,340" fill="transparent" stroke="none" stroke-width="2"/>
-            <polygon id="pz-medical"  points="398,340 534,340 534,460 398,460" fill="transparent" stroke="none" stroke-width="2"/>
-            <polygon id="pz-hopkins"  points="28,262 130,262 130,370 28,370" fill="transparent" stroke="none" stroke-width="2"/>
-            <polygon id="pz-sio"      points="10,378 120,378 120,460 10,460" fill="transparent" stroke="none" stroke-width="2"/>
-            <polygon id="pz-sw"       points="132,382 368,382 368,460 132,460" fill="transparent" stroke="none" stroke-width="2"/>
-            <polygon id="pz-cp"       points="540,210 674,210 674,460 540,460" fill="transparent" stroke="none" stroke-width="2"/>
+            <!-- ZONE POLYGONS -->
+            <polygon id="pz-rimac"    points="73,8 219,8 219,100 73,100"      fill="transparent" stroke="none"/>
+            <polygon id="pz-warren"   points="222,8 386,8 386,100 222,100"    fill="transparent" stroke="none"/>
+            <polygon id="pz-scholars" points="288,8 386,8 386,100 288,100"    fill="transparent" stroke="none"/>
+            <polygon id="pz-revelle"  points="28,108 130,108 130,258 28,258"  fill="transparent" stroke="none"/>
+            <polygon id="pz-geisel"   points="132,108 282,108 282,258 132,258" fill="transparent" stroke="none"/>
+            <polygon id="pz-rady"     points="286,108 386,108 386,210 286,210" fill="transparent" stroke="none"/>
+            <polygon id="pz-health"   points="398,8 534,8 534,210 398,210"     fill="transparent" stroke="none"/>
+            <polygon id="pz-bio"      points="398,210 534,210 534,340 398,340" fill="transparent" stroke="none"/>
+            <polygon id="pz-medical"  points="398,340 534,340 534,460 398,460" fill="transparent" stroke="none"/>
+            <polygon id="pz-hopkins"  points="28,262 130,262 130,370 28,370"   fill="transparent" stroke="none"/>
+            <polygon id="pz-sio"      points="10,378 120,378 120,460 10,460"   fill="transparent" stroke="none"/>
+            <polygon id="pz-sw"       points="132,382 368,382 368,460 132,460" fill="transparent" stroke="none"/>
+            <polygon id="pz-cp"       points="540,210 674,210 674,460 540,460" fill="transparent" stroke="none"/>
 
-            <!-- ── ZONE LABELS ── -->
-            <text x="146" y="52"  text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">RIMAC / ATHLETICS</text>
-            <text x="300" y="52"  text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">WARREN / SIXTH</text>
-            <text x="79"  y="183" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">REVELLE / MUIR</text>
-            <text x="207" y="183" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">PRICE CTR / GEISEL</text>
-            <text x="337" y="158" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">SCHOLARS</text>
-            <text x="466" y="100" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">HEALTH SCIENCES</text>
-            <text x="466" y="275" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">MEDICAL CTR</text>
-            <text x="79"  y="315" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">HOPKINS</text>
-            <text x="65"  y="418" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">SIO</text>
-            <text x="248" y="420" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">SOUTHWEST</text>
-            <text x="606" y="335" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">CAMPUS POINT</text>
-
-            <!-- Legend -->
-            <rect x="5" y="280" width="76" height="56" rx="4" fill="rgba(237,232,219,0.92)"/>
-            <rect x="11" y="288" width="10" height="10" rx="2" fill="#B6E8D0" stroke="#0F8C55" stroke-width="0.5"/>
-            <text x="25" y="297" font-size="8" font-family="sans-serif" fill="#5A5040">Likely open</text>
-            <rect x="11" y="303" width="10" height="10" rx="2" fill="#FAE5B0" stroke="#C49010" stroke-width="0.5"/>
-            <text x="25" y="312" font-size="8" font-family="sans-serif" fill="#5A5040">Limited spots</text>
-            <rect x="11" y="318" width="10" height="10" rx="2" fill="#F7C0C0" stroke="#C0392B" stroke-width="0.5"/>
-            <text x="25" y="327" font-size="8" font-family="sans-serif" fill="#5A5040">Usually full</text>
+            <!-- ZONE LABELS -->
+            <text x="146" y="52"  text-anchor="middle" font-size="9" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">RIMAC / ATHLETICS</text>
+            <text x="300" y="52"  text-anchor="middle" font-size="9" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">WARREN / SIXTH</text>
+            <text x="79"  y="183" text-anchor="middle" font-size="9" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">REVELLE / MUIR</text>
+            <text x="207" y="183" text-anchor="middle" font-size="9" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">PRICE CTR / GEISEL</text>
+            <text x="337" y="158" text-anchor="middle" font-size="9" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">SCHOLARS</text>
+            <text x="466" y="100" text-anchor="middle" font-size="9" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">HEALTH SCIENCES</text>
+            <text x="466" y="275" text-anchor="middle" font-size="9" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">MEDICAL CTR</text>
+            <text x="79"  y="315" text-anchor="middle" font-size="9" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">HOPKINS</text>
+            <text x="65"  y="418" text-anchor="middle" font-size="9" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">SIO</text>
+            <text x="248" y="420" text-anchor="middle" font-size="9" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">SOUTHWEST</text>
+            <text x="606" y="335" text-anchor="middle" font-size="9" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">CAMPUS POINT</text>
 
             <!-- Destination marker -->
-            <circle id="pdDestDot" cx="-99" cy="-99" r="8" fill="#0F2044" stroke="white" stroke-width="2" opacity="0.9"/>
+            <circle id="fp2-dest-dot" cx="-99" cy="-99" r="8" fill="var(--navy)" stroke="white" stroke-width="2" opacity="0.9"/>
           </svg>
           <!-- Lot pins -->
-          <div id="pdPinLayer" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4"></div>
+          <div id="fp2-pins" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div>
         </div>
 
-        <!-- RESULTS -->
-        <div id="pdEmpty" class="pred-empty">
-          <div class="ei">🔍</div>
-          <p>Select a destination and hit <strong>Find Available Spots</strong> to see predicted availability.</p>
+        <div id="fp2-empty" class="fp2-empty">
+          <div class="fp2-empty-icon">🅿️</div>
+          <p>Select a destination and click <strong>Find Available Spots</strong> to see predicted availability.</p>
         </div>
-        <div id="pdResults" style="display:none">
-          <div class="results-header">
-            <div class="results-title" id="pdResultsTitle"></div>
-            <div class="results-sub" id="pdResultsSub"></div>
+
+        <div id="fp2-results" style="display:none">
+          <div class="fp2-results-head">
+            <div class="fp2-results-title" id="fp2-results-title"></div>
+            <div class="fp2-results-sub" id="fp2-results-sub"></div>
           </div>
-          <div id="pdCards"></div>
-          <div class="disclaimer" id="pdDisclaimer"></div>
+          <div id="fp2-cards" class="fp2-cards"></div>
+          <div class="fp2-disclaimer" id="fp2-disclaimer">⚠️ Historical averages · Not real-time</div>
         </div>
       </div>
     </div>
+
+    <script>
+    (function(){
+      const HOURS = ['8am','9am','10am','11am','12pm','1pm','2pm','3pm','4pm','5pm'];
+      const PERMITS = ['A','B','S','D','Visitor'];
+      const QUARTERS = ['Fall','Winter','Spring','Summer'];
+      const LOTS = [{"id":"P303","x":12.5,"y":9.8,"A":[0.31,0.48,0.64,0.76,0.77,0.75,0.73,0.68,0.54,0.4],"B":[0.29,0.46,0.62,0.74,0.75,0.73,0.71,0.66,0.52,0.38]},{"id":"P308","x":11.9,"y":6.8,"A":[0.33,0.51,0.67,0.79,0.8,0.78,0.76,0.7,0.56,0.42],"B":[0.31,0.49,0.65,0.77,0.78,0.76,0.74,0.68,0.54,0.4]},{"id":"P309","x":9.6,"y":15.5,"A":[0.35,0.53,0.69,0.81,0.82,0.8,0.78,0.72,0.58,0.44],"B":[0.33,0.51,0.67,0.79,0.8,0.78,0.76,0.7,0.56,0.42]},{"id":"P310","x":8.5,"y":10.5,"A":[0.28,0.45,0.6,0.72,0.73,0.71,0.69,0.64,0.51,0.38],"B":[0.26,0.43,0.58,0.7,0.71,0.69,0.67,0.62,0.49,0.36]},{"id":"P101","x":4.1,"y":40.3,"A":[0.36,0.55,0.72,0.85,0.86,0.84,0.82,0.76,0.62,0.46],"B":[0.34,0.52,0.63,0.74,0.75,0.73,0.71,0.65,0.51,0.35]},{"id":"P105","x":4.1,"y":42.9,"A":[0.34,0.53,0.7,0.83,0.84,0.82,0.8,0.74,0.6,0.44],"B":[0.32,0.5,0.61,0.72,0.73,0.71,0.69,0.63,0.49,0.33]},{"id":"P113","x":8.4,"y":49.5,"A":[0.38,0.57,0.74,0.87,0.88,0.86,0.84,0.78,0.64,0.48],"B":[0.36,0.54,0.65,0.76,0.77,0.75,0.73,0.67,0.53,0.37]},{"id":"P116","x":7.5,"y":53.4,"A":[0.4,0.59,0.76,0.89,0.9,0.88,0.86,0.8,0.66,0.5],"B":[0.38,0.56,0.67,0.78,0.79,0.77,0.75,0.69,0.55,0.39]},{"id":"P201","x":36.4,"y":37.7,"A":[0.42,0.62,0.8,0.94,0.95,0.93,0.91,0.84,0.7,0.53],"B":[0.4,0.6,0.72,0.85,0.86,0.84,0.82,0.75,0.61,0.45]},{"id":"P204","x":30.7,"y":41.8,"A":[0.44,0.64,0.82,0.96,0.97,0.95,0.93,0.86,0.72,0.55],"B":[0.42,0.62,0.74,0.87,0.88,0.86,0.84,0.77,0.63,0.47]},{"id":"P205","x":25.7,"y":44.5,"A":[0.4,0.6,0.78,0.92,0.93,0.91,0.89,0.82,0.68,0.51],"B":[0.38,0.58,0.7,0.83,0.84,0.82,0.8,0.73,0.59,0.43]},{"id":"P401","x":20.4,"y":54.5,"A":[0.37,0.56,0.75,0.88,0.89,0.87,0.85,0.79,0.65,0.49],"B":[0.36,0.54,0.65,0.77,0.78,0.76,0.74,0.68,0.54,0.38],"S":[0.22,0.4,0.58,0.68,0.67,0.65,0.64,0.58,0.46,0.34]},{"id":"P402","x":13.7,"y":54.6,"A":[0.35,0.54,0.73,0.86,0.87,0.85,0.83,0.77,0.63,0.47],"B":[0.34,0.52,0.63,0.75,0.76,0.74,0.72,0.66,0.52,0.36]},{"id":"P407","x":34.9,"y":56.8,"A":[0.4,0.58,0.78,0.91,0.92,0.9,0.88,0.82,0.68,0.52],"B":[0.38,0.56,0.67,0.79,0.8,0.78,0.76,0.7,0.56,0.4]},{"id":"P408","x":35.1,"y":61.6,"A":[0.42,0.61,0.79,0.93,0.94,0.92,0.9,0.83,0.69,0.53],"B":[0.4,0.58,0.69,0.81,0.82,0.8,0.78,0.72,0.58,0.42]},{"id":"P501","x":9.3,"y":61.9,"A":[0.32,0.5,0.66,0.78,0.79,0.77,0.75,0.7,0.56,0.42],"B":[0.3,0.48,0.64,0.76,0.77,0.75,0.73,0.68,0.54,0.4],"S":[0.18,0.36,0.55,0.65,0.64,0.62,0.61,0.56,0.44,0.32]},{"id":"P502","x":14.9,"y":60.0,"A":[0.3,0.48,0.64,0.76,0.77,0.75,0.73,0.68,0.54,0.4],"B":[0.28,0.46,0.62,0.74,0.75,0.73,0.71,0.66,0.52,0.38]},{"id":"P504","x":14.9,"y":66.8,"A":[0.28,0.46,0.62,0.74,0.75,0.73,0.71,0.66,0.52,0.38],"B":[0.26,0.44,0.6,0.72,0.73,0.71,0.69,0.64,0.5,0.36]},{"id":"P508","x":21.4,"y":61.0,"A":[0.34,0.52,0.68,0.8,0.81,0.79,0.77,0.72,0.58,0.44],"B":[0.32,0.5,0.66,0.78,0.79,0.77,0.75,0.7,0.56,0.42]},{"id":"P601","x":52.6,"y":36.3,"A":[0.33,0.51,0.67,0.79,0.8,0.78,0.76,0.71,0.57,0.43],"Visitor":[0.28,0.45,0.6,0.72,0.73,0.71,0.69,0.64,0.51,0.38]},{"id":"P603","x":52.4,"y":45.4,"A":[0.31,0.49,0.65,0.77,0.78,0.76,0.74,0.69,0.55,0.41],"Visitor":[0.26,0.43,0.58,0.7,0.71,0.69,0.67,0.62,0.49,0.36]},{"id":"P604","x":50.2,"y":57.9,"A":[0.29,0.47,0.63,0.75,0.76,0.74,0.72,0.67,0.53,0.39],"Visitor":[0.24,0.41,0.56,0.68,0.69,0.67,0.65,0.6,0.47,0.34]},{"id":"P606","x":53.9,"y":53.8,"A":[0.33,0.51,0.67,0.79,0.8,0.78,0.76,0.71,0.57,0.43]},{"id":"P701","x":62.2,"y":47.0,"A":[0.35,0.53,0.69,0.82,0.83,0.81,0.79,0.74,0.6,0.46]},{"id":"P704","x":61.6,"y":57.6,"A":[0.33,0.51,0.67,0.8,0.81,0.79,0.77,0.72,0.58,0.44]},{"id":"P741","x":73.8,"y":44.3,"S":[0.44,0.63,0.79,0.88,0.88,0.88,0.87,0.83,0.75,0.7]},{"id":"P904","x":43.6,"y":41.5,"A":[0.25,0.42,0.57,0.68,0.69,0.67,0.65,0.61,0.48,0.35],"B":[0.23,0.4,0.55,0.66,0.67,0.65,0.63,0.59,0.46,0.33]},{"id":"P907","x":43.6,"y":45.4,"A":[0.27,0.44,0.59,0.7,0.71,0.69,0.67,0.63,0.5,0.37],"B":[0.25,0.42,0.57,0.68,0.69,0.67,0.65,0.61,0.48,0.35]},{"id":"P910","x":46.4,"y":49.7,"A":[0.29,0.46,0.61,0.72,0.73,0.71,0.69,0.65,0.52,0.39],"B":[0.27,0.44,0.59,0.7,0.71,0.69,0.67,0.63,0.5,0.37]},{"id":"P003","x":2.3,"y":76.6,"B":[0.22,0.38,0.52,0.62,0.63,0.61,0.59,0.55,0.43,0.31],"Visitor":[0.2,0.36,0.5,0.6,0.61,0.59,0.57,0.53,0.41,0.29]},{"id":"P007","x":1.8,"y":59.7,"B":[0.2,0.35,0.48,0.58,0.59,0.57,0.55,0.51,0.4,0.28]},{"id":"P952","x":19.8,"y":69.2,"A":[0.2,0.35,0.48,0.58,0.59,0.57,0.55,0.51,0.4,0.28],"B":[0.18,0.33,0.46,0.56,0.57,0.55,0.53,0.49,0.38,0.26]},{"id":"P960","x":22.6,"y":73.3,"B":[0.16,0.3,0.44,0.54,0.55,0.53,0.51,0.47,0.36,0.24]}];
+      const DESTS = {"geisel":{"l":"Geisel Library / Price Center","svgX":207,"svgY":183,"lots":["P401","P402","P407","P408"]},"rimac":{"l":"RIMAC / Rady School","svgX":146,"svgY":52,"lots":["P303","P308","P309"]},"warren":{"l":"Warren / Sixth / Marshall","svgX":300,"svgY":52,"lots":["P201","P204","P205"]},"revelle":{"l":"Revelle / Muir","svgX":79,"svgY":183,"lots":["P101","P105","P113","P116"]},"health":{"l":"Health Sciences","svgX":466,"svgY":100,"lots":["P601","P603","P604","P606"]},"scholars":{"l":"Scholars / Mesa Nueva","svgX":337,"svgY":55,"lots":["P904","P907","P910"]},"hopkins":{"l":"Hopkins / South Mesa","svgX":79,"svgY":315,"lots":["P501","P502","P504","P508"]},"sio":{"l":"SIO / Scripps","svgX":65,"svgY":418,"lots":["P003","P007"]}};
+      const ZONE_LOTS = {"pz-rimac":["P303","P308","P309","P310"],"pz-warren":["P201","P204","P205"],"pz-scholars":["P904","P907","P910"],"pz-revelle":["P101","P105","P113","P116"],"pz-geisel":["P401","P402","P407","P408"],"pz-rady":["P303","P308"],"pz-health":["P601","P603","P604","P606"],"pz-bio":["P601","P603"],"pz-medical":["P701","P704"],"pz-hopkins":["P501","P502","P504","P508"],"pz-sio":["P003","P007"],"pz-sw":["P952","P960"],"pz-cp":["P741"]};
+
+      const LM = Object.fromEntries(LOTS.map(l => [l.id, l]));
+      let curPermit  = 'B';
+      let curQuarter = 'Fall';
+      let curHour    = 3;
+      let curDest    = '';
+
+      // Auto-detect season
+      const m = new Date().getMonth();
+      curQuarter = m>=8&&m<=11 ? 'Fall' : m<=1 ? 'Winter' : m<=4 ? 'Spring' : 'Summer';
+
+      function getOcc(lotId, permit, hi){
+        const l = LM[lotId]; if(!l) return 0.6;
+        const d = l[permit]; const fb = l.A || l.B || l.Visitor;
+        const base = d ? d[hi] : (fb ? fb[hi]*0.88 : 0.55);
+        const adj = curQuarter==='Summer'?-0.16 : curQuarter==='Winter'?0.06 : curQuarter==='Spring'?-0.03 : 0;
+        return Math.min(1, Math.max(0, base + adj));
+      }
+
+      function zoneAvg(zoneId){
+        const ids = ZONE_LOTS[zoneId] || [];
+        if(!ids.length) return 0.6;
+        return ids.reduce((s,id) => s+getOcc(id, curPermit, curHour), 0) / ids.length;
+      }
+
+      function zoneFill(v){
+        if(v < 0.5)  return 'rgba(29,158,117,0.38)';
+        if(v < 0.78) return 'rgba(186,117,23,0.38)';
+        return 'rgba(192,57,43,0.38)';
+      }
+      function zoneStroke(v){
+        if(v < 0.5)  return '#15C77A';
+        if(v < 0.78) return '#E09218';
+        return '#E04028';
+      }
+      function pinColor(v){
+        if(v < 0.5)  return '#1d7a5a';
+        if(v < 0.78) return '#BA7517';
+        return '#C0392B';
+      }
+      function verdict(v){
+        if(v < 0.5)  return {label:'Yes', cls:'v-yes',   desc:'Spot likely available'};
+        if(v < 0.78) return {label:'Maybe', cls:'v-maybe', desc:'Limited spots'};
+        return            {label:'No', cls:'v-no',    desc:'Usually full'};
+      }
+
+      // Build pins overlay
+      const pinsLayer = document.getElementById('fp2-pins');
+      LOTS.forEach(l => {
+        const p = document.createElement('div');
+        p.className = 'fp2-pin';
+        p.id = 'fp2-pin-' + l.id;
+        p.style.cssText = 'left:'+l.x+'%;top:'+l.y+'%;pointer-events:all;background:#999';
+        p.title = l.id;
+        p.onclick = () => selectLot(l.id);
+        pinsLayer.appendChild(p);
+      });
+
+      function selectLot(lotId){
+        document.querySelectorAll('.fp2-pin').forEach(p => p.classList.remove('sel'));
+        const p = document.getElementById('fp2-pin-' + lotId);
+        if(p) p.classList.add('sel');
+      }
+
+      function colorMap(){
+        const dl = curDest ? DESTS[curDest].lots : null;
+        LOTS.forEach(l => {
+          const p = document.getElementById('fp2-pin-' + l.id);
+          if(!p) return;
+          p.style.background = pinColor(getOcc(l.id, curPermit, curHour));
+          p.classList.toggle('dim', dl && !dl.includes(l.id));
+        });
+        Object.keys(ZONE_LOTS).forEach(z => {
+          const el = document.getElementById(z);
+          if(!el) return;
+          const v = zoneAvg(z);
+          el.setAttribute('fill', zoneFill(v));
+          el.setAttribute('stroke', zoneStroke(v));
+          el.setAttribute('stroke-width', '2');
+        });
+      }
+
+      function updateTime(){
+        curHour = parseInt(document.getElementById('fp2-time').value);
+        document.getElementById('fp2-time-display').textContent = HOURS[curHour];
+        colorMap();
+        if(curDest) renderResults();
+      }
+
+      function find(){
+        curDest = document.getElementById('fp2-dest').value;
+        if(!curDest){ alert('Please select a destination.'); return; }
+        const d = DESTS[curDest];
+        const dot = document.getElementById('fp2-dest-dot');
+        dot.setAttribute('cx', d.svgX);
+        dot.setAttribute('cy', d.svgY);
+        colorMap();
+        renderResults();
+      }
+
+      function renderResults(){
+        const d = DESTS[curDest];
+        const scored = d.lots.map(id => ({id, v: getOcc(id, curPermit, curHour)}))
+                              .sort((a,b) => a.v - b.v);
+
+        document.getElementById('fp2-empty').style.display = 'none';
+        document.getElementById('fp2-results').style.display = 'block';
+        document.getElementById('fp2-results-title').textContent = d.l;
+        document.getElementById('fp2-results-sub').textContent =
+          HOURS[curHour] + ' · ' + curQuarter + ' · ' + curPermit + ' permit';
+
+        document.getElementById('fp2-cards').innerHTML = scored.map((s, i) => {
+          const vd = verdict(s.v);
+          const pct = Math.round(s.v * 100);
+          const isBest = i === 0 && s.v < 0.78;
+          const col = pinColor(s.v);
+          return '<div class="fp2-card' + (isBest ? ' best' : '') + '" onclick="document.getElementById(\'fp2-pin-' + s.id + '\').click()">' +
+            '<div class="fp2-card-top">' +
+              '<div>' +
+                '<div class="fp2-card-lot">' + s.id + '</div>' +
+                (isBest ? '<div class="fp2-card-best">★ Best option</div>' : '') +
+              '</div>' +
+              '<div class="fp2-card-pct" style="color:' + col + '">' + pct + '%</div>' +
+            '</div>' +
+            '<div class="fp2-card-area">' + curPermit + ' permit · ' + d.l + '</div>' +
+            '<div class="fp2-card-bar"><div class="fp2-card-bar-fill" style="width:' + pct + '%;background:' + col + '"></div></div>' +
+            '<div class="fp2-verdict ' + vd.cls + '">' + vd.label + '</div>' +
+            '<div class="fp2-card-desc">' + vd.desc + ' at ' + HOURS[curHour] + '</div>' +
+          '</div>';
+        }).join('');
+
+        document.getElementById('fp2-disclaimer').innerHTML =
+          '⚠️ Historical averages · Not real-time · ' +
+          (scored.length && scored[0].v < 0.78 ? '<strong>' + scored[0].id + '</strong> is the best option' : 'All nearby lots are likely full');
+      }
+
+      // Build permit chips
+      const pp = document.getElementById('fp2-permits');
+      PERMITS.forEach(p => {
+        const b = document.createElement('button');
+        b.className = 'fp2-chip' + (p === curPermit ? ' on' : '');
+        b.textContent = p;
+        b.onclick = () => {
+          curPermit = p;
+          document.querySelectorAll('#fp2-permits .fp2-chip').forEach(x => x.classList.remove('on'));
+          b.classList.add('on');
+          colorMap();
+          if(curDest) renderResults();
+        };
+        pp.appendChild(b);
+      });
+
+      // Build quarter chips
+      const qq = document.getElementById('fp2-quarters');
+      QUARTERS.forEach(q => {
+        const b = document.createElement('button');
+        b.className = 'fp2-chip' + (q === curQuarter ? ' on' : '');
+        b.textContent = q;
+        b.onclick = () => {
+          curQuarter = q;
+          document.querySelectorAll('#fp2-quarters .fp2-chip').forEach(x => x.classList.remove('on'));
+          b.classList.add('on');
+          colorMap();
+          if(curDest) renderResults();
+        };
+        qq.appendChild(b);
+      });
+
+      // Wire up time slider and find button
+      document.getElementById('fp2-time').addEventListener('input', updateTime);
+      document.getElementById('fp2-find-btn').addEventListener('click', find);
+
+      // Initial paint
+      colorMap();
+    })();
+    </script>
   </section>
+
 
 </main>
