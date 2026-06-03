@@ -397,7 +397,7 @@ function cmGetO(l,p,h){
   return Math.min(1,Math.max(0,base+adj));
 }
 
-(function cmInit(){
+function cmInit(){
   const wrap=document.getElementById('cmWrap');
   CM_LOTS.forEach(l=>{
     const p=document.createElement('div');
@@ -422,7 +422,7 @@ function cmGetO(l,p,h){
   });
   cmColPins();
   document.addEventListener('click',e=>{if(!e.target.closest('.cm-pin')&&!e.target.closest('.cm-tip'))document.getElementById('cmTip').style.display='none';});
-})();
+}
 
 function cmColPins(){
   const dLots=cmD?CM_DESTS[cmD].ls:null;
@@ -476,6 +476,231 @@ function cmRender(){
   }).join('');
 }
 // ══ END CAMPUS MAP ═══════════════════════════════════════════════════════════
+
+
+// ══ FIND PARKING — POLY MAP PREDICTOR ══════════════════════════════════════
+const PD_ZONE_LOTS = {"pz-rimac":["P303","P308","P309"],"pz-warren":["P201","P204","P205"],"pz-scholars":["P904","P907","P910"],"pz-revelle":["P101","P105","P113"],"pz-geisel":["P401","P402","P407","P408"],"pz-rady":["P303","P308"],"pz-health":["P601","P603","P604"],"pz-bio":["P601","P603"],"pz-medical":["P701","P704"],"pz-hopkins":["P501","P502","P504"],"pz-sio":["P003","P007"],"pz-sw":["P952","P960"],"pz-cp":["P741"]};
+const PD_LOT_POSITIONS = {"P303":[12.5,9.8],"P308":[11.9,6.8],"P309":[9.6,15.5],"P310":[8.5,10.5],"P101":[4.1,40.3],"P105":[4.1,42.9],"P113":[8.4,49.5],"P116":[7.5,53.4],"P201":[36.4,37.7],"P204":[30.7,41.8],"P205":[25.7,44.5],"P401":[20.4,54.5],"P402":[13.7,54.6],"P407":[34.9,56.8],"P408":[35.1,61.6],"P501":[9.3,61.9],"P502":[14.9,60.0],"P504":[14.9,66.8],"P508":[21.4,61.0],"P601":[52.6,36.3],"P603":[52.4,45.4],"P604":[50.2,57.9],"P606":[53.9,53.8],"P701":[62.2,47.0],"P704":[61.6,57.6],"P741":[73.8,44.3],"P904":[43.6,41.5],"P907":[43.6,45.4],"P910":[46.4,49.7],"P003":[2.3,76.6],"P007":[1.8,59.7],"P952":[19.8,69.2],"P960":[22.6,73.3]};
+const PD_DEST_SVG = {"geisel":[207,183],"rimac":[146,52],"warren":[300,52],"revelle":[79,183],"health":[466,100],"scholars":[337,55],"hopkins":[79,315],"sio":[65,418]};
+const PD_PERMIT_LIST = ['A','B','S','D','Visitor'];
+const PD_SEASON_LIST = ['Fall','Winter','Spring','Summer'];
+let pdCurPermit = 'B';
+let pdCurSeason = 'Fall';
+
+// Auto-detect season
+(function(){
+  const m = new Date().getMonth();
+  pdCurSeason = m>=8&&m<=11?'Fall':m<=1?'Winter':m<=4?'Spring':'Summer';
+  document.getElementById('pdSeason') && (document.getElementById('pdSeason').value = pdCurSeason);
+})();
+
+function pdGetOcc(lotId, permit, hi){
+  const l = PD_LOT[lotId];
+  if(!l) return 0.6;
+  const entry = l.types?.[permit];
+  if(!entry) return 0.6;
+  const key = hi + '_' + pdCurSeason.slice(0,2);
+  const data = entry[key];
+  if(!data) return 0.6;
+  return data.m != null ? data.m : (data.r || 0.6);
+}
+
+function pdZoneAvg(zoneId){
+  const lots = PD_ZONE_LOTS[zoneId] || [];
+  if(!lots.length) return 0.6;
+  const vals = lots.map(id => pdGetOcc(id, pdCurPermit, parseInt(document.getElementById('pdTime')?.value||3)));
+  return vals.reduce((a,b)=>a+b,0)/vals.length;
+}
+
+function pdZoneFill(v){
+  if(v < 0.5)  return 'rgba(29,158,117,0.38)';
+  if(v < 0.78) return 'rgba(186,117,23,0.38)';
+  return 'rgba(192,57,43,0.38)';
+}
+function pdZoneStroke(v){
+  if(v < 0.5)  return '#15C77A';
+  if(v < 0.78) return '#E09218';
+  return '#E04028';
+}
+function pdPinColor(v){
+  if(v < 0.5)  return '#1D9E75';
+  if(v < 0.78) return '#BA7517';
+  return '#C0392B';
+}
+function pdVerdict(v){
+  if(v < 0.5)  return {label:'Yes',   cls:'v-yes', icon:'✓', desc:'Spot likely available'};
+  if(v < 0.78) return {label:'Maybe', cls:'v-m',   icon:'~', desc:'Limited spots'};
+  return            {label:'No',    cls:'v-n',   icon:'✗', desc:'Usually full'};
+}
+
+function pdColorZones(){
+  const hi = parseInt(document.getElementById('pdTime')?.value || 3);
+  Object.keys(PD_ZONE_LOTS).forEach(zid => {
+    const el = document.getElementById(zid);
+    if(!el) return;
+    const v = pdZoneAvg(zid);
+    el.setAttribute('fill', pdZoneFill(v));
+    el.setAttribute('stroke', pdZoneStroke(v));
+    el.setAttribute('stroke-width','2');
+  });
+}
+
+function pdColorPins(){
+  const hi = parseInt(document.getElementById('pdTime')?.value || 3);
+  const destVal = document.getElementById('pdDest')?.value;
+  const destLots = destVal && PD_DEST[destVal] ? PD_DEST[destVal].lots : null;
+  Object.keys(PD_LOT_POSITIONS).forEach(lotId => {
+    const pin = document.getElementById('pdpin-'+lotId);
+    if(!pin) return;
+    const v = pdGetOcc(lotId, pdCurPermit, hi);
+    pin.style.background = pdPinColor(v);
+    if(destLots) pin.style.opacity = destLots.includes(lotId) ? '1' : '0.18';
+    else pin.style.opacity = '0.85';
+  });
+}
+
+function pdUpdateAll(){
+  pdColorZones();
+  pdColorPins();
+}
+
+function pdUpdateTime(){
+  const hi = parseInt(document.getElementById('pdTime').value);
+  document.getElementById('pdTimeLabel').textContent = PD_HOURS[hi];
+  pdUpdateAll();
+}
+
+function pdRun(){
+  const dest = document.getElementById('pdDest').value;
+  const hi   = parseInt(document.getElementById('pdTime').value);
+  const permits = [pdCurPermit];
+  const season = pdCurSeason;
+
+  if(!dest){ alert('Please select a destination.'); return; }
+
+  // Move destination dot
+  const svgCoords = PD_DEST_SVG[dest];
+  if(svgCoords){
+    const dot = document.getElementById('pdDestDot');
+    if(dot){ dot.setAttribute('cx', svgCoords[0]); dot.setAttribute('cy', svgCoords[1]); }
+  }
+
+  pdUpdateAll();
+
+  const destInfo = PD_DEST[dest];
+  if(!destInfo){ return; }
+  const lots = destInfo.lots || [];
+
+  // Score and sort
+  const scored = lots.map(lotId => {
+    const v = pdGetOcc(lotId, pdCurPermit, hi);
+    return {lotId, v};
+  }).sort((a,b) => a.v - b.v);
+
+  // Render results
+  document.getElementById('pdEmpty').style.display   = 'none';
+  document.getElementById('pdResults').style.display = 'block';
+  document.getElementById('pdResultsTitle').textContent = destInfo.label || dest;
+  document.getElementById('pdResultsSub').textContent =
+    PD_HOURS[hi] + ' · ' + season + ' · ' + pdCurPermit + ' permit';
+
+  const cards = document.getElementById('pdCards');
+  cards.innerHTML = scored.slice(0,6).map((s,i) => {
+    const vd = pdVerdict(s.v);
+    return `<div class="result-card" onclick="pdSelectLot('${s.lotId}')">
+      <div class="rc-rank">${i+1}</div>
+      <div class="rc-body">
+        <div class="rc-lot">${s.lotId}</div>
+        <div class="rc-types">${pdCurPermit} permit</div>
+      </div>
+      <div class="rc-right">
+        <div class="verdict ${vd.cls}">${vd.label}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">${vd.desc}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const top = scored[0];
+  document.getElementById('pdDisclaimer').innerHTML =
+    '⚠️ Historical averages only · Not real-time · ' +
+    (top ? 'Best option: <strong>' + top.lotId + '</strong>' : '');
+}
+
+function pdSelectLot(lotId){
+  document.querySelectorAll('#pdPinLayer .pd-pin').forEach(p => p.style.transform = 'translate(-50%,-50%)');
+  const pin = document.getElementById('pdpin-'+lotId);
+  if(pin) pin.style.transform = 'translate(-50%,-50%) scale(1.8)';
+}
+
+// Build permit chips
+(function pdBuildChips(){
+  const pp = document.getElementById('pdPermits');
+  if(!pp) return;
+  pp.innerHTML = '';
+  PD_PERMIT_LIST.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'tg-btn' + (p === pdCurPermit ? ' on' : '');
+    b.textContent = p;
+    if(p === pdCurPermit) b.style.cssText = 'background:var(--navy);color:#fff;border-color:var(--navy)';
+    b.onclick = () => {
+      pdCurPermit = p;
+      document.querySelectorAll('#pdPermits .tg-btn').forEach(x => {
+        x.classList.remove('on');
+        x.style.background = '';
+        x.style.color = '';
+        x.style.borderColor = '';
+      });
+      b.classList.add('on');
+      b.style.cssText = 'background:var(--navy);color:#fff;border-color:var(--navy)';
+      pdUpdateAll();
+    };
+    pp.appendChild(b);
+  });
+
+  // Build season chips
+  const ps = document.getElementById('pdSeasons');
+  if(!ps) return;
+  ps.innerHTML = '';
+  PD_SEASON_LIST.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'tg-btn' + (s === pdCurSeason ? ' on' : '');
+    b.textContent = s;
+    if(s === pdCurSeason) b.style.cssText = 'background:var(--navy);color:#fff;border-color:var(--navy)';
+    b.onclick = () => {
+      pdCurSeason = s;
+      document.querySelectorAll('#pdSeasons .tg-btn').forEach(x => {
+        x.classList.remove('on');
+        x.style.background = '';
+        x.style.color = '';
+        x.style.borderColor = '';
+      });
+      b.classList.add('on');
+      b.style.cssText = 'background:var(--navy);color:#fff;border-color:var(--navy)';
+      pdUpdateAll();
+    };
+    ps.appendChild(b);
+  });
+
+  // Build lot pins in pin layer
+  const layer = document.getElementById('pdPinLayer');
+  if(!layer) return;
+  layer.innerHTML = '';
+  Object.entries(PD_LOT_POSITIONS).forEach(([lotId, [x,y]]) => {
+    const pin = document.createElement('div');
+    pin.className = 'pd-pin';
+    pin.id = 'pdpin-' + lotId;
+    pin.style.cssText = 'position:absolute;width:11px;height:11px;border-radius:50%;' +
+      'border:2px solid rgba(255,255,255,0.9);cursor:pointer;' +
+      'transform:translate(-50%,-50%);transition:transform .12s;z-index:5;' +
+      'box-shadow:0 1px 3px rgba(0,0,0,0.35);left:'+x+'%;top:'+y+'%';
+    pin.title = lotId;
+    pin.onclick = () => pdSelectLot(lotId);
+    layer.appendChild(pin);
+  });
+
+  pdUpdateAll();
+})();
+// ══ END FIND PARKING ════════════════════════════════════════════════════════
 
 </script>
 <style>
@@ -1163,209 +1388,274 @@ function cmRender(){
   <!-- ══ FIND PARKING ══ -->
   <section id="s-lots" class="section active">
     <div class="section-header">
-      <div class="section-tag">Interactive map · Survey data 2019–2026</div>
+      <div class="section-tag">Predictive tool · Survey data 2019–2026</div>
       <h2>Find Parking</h2>
-      <p>Select a campus destination, set your arrival time and permit type, then hit Find Parking to see nearby lots color-coded by predicted availability.</p>
+      <p>Select your destination, arrival time, and permit type. Zone colors update live to show predicted availability.</p>
     </div>
 
-    <div class="cm-wrap" id="cmWrap">
-    <svg width="100%" viewBox="0 0 680 420" style="display:block">
-    <rect width="680" height="420" fill="#EAE4D8"/>
-    <path d="M0,420 L0,380 Q60,375 90,365 Q120,355 130,330 Q140,305 125,270 Q110,235 115,200 Q120,165 100,140 Q80,115 90,80 Q100,45 130,30 L0,30 Z" fill="#C8D998" opacity="0.6"/>
-    <path d="M155,30 Q145,60 138,100 Q130,145 138,175 Q146,205 140,245 Q134,285 145,320 Q156,355 148,390 L120,420 Q125,385 118,352 Q111,319 118,285 Q125,251 118,215 Q111,179 120,145 Q129,111 122,78 Q115,45 125,30 Z" fill="#8BA055" opacity="0.75"/>
-    <ellipse cx="168" cy="290" rx="28" ry="55" fill="#8BA055" opacity="0.7" transform="rotate(-20,168,290)"/>
-    <rect x="80" y="36" width="140" height="88" rx="3" fill="#78A840" opacity="0.85"/>
-    <rect x="85" y="41" width="130" height="78" rx="2" fill="#82B248" opacity="0.9"/>
-    <line x1="85" y1="60" x2="215" y2="60" stroke="#6A9838" stroke-width="0.5" opacity="0.5"/>
-    <line x1="85" y1="80" x2="215" y2="80" stroke="#6A9838" stroke-width="0.5" opacity="0.5"/>
-    <line x1="140" y1="41" x2="140" y2="119" stroke="#6A9838" stroke-width="0.5" opacity="0.5"/>
-    <rect x="246" y="36" width="148" height="88" rx="3" fill="#78A840" opacity="0.7"/>
-    <path d="M440,36 L596,36 L598,288 Q580,292 565,288 Q550,284 538,290 Q526,296 514,288 Q502,280 490,285 Q478,290 466,285 Q454,280 442,284 Z" fill="#D5CFC6" opacity="0.8"/>
-    <path d="M442,292 L665,292 L665,415 L442,415 Z" fill="#D2CCB8" opacity="0.75"/>
-    <rect x="442" y="298" width="55" height="110" rx="3" fill="#CBC5AF" opacity="0.7"/>
-    <rect x="504" y="298" width="60" height="110" rx="3" fill="#CBC5AF" opacity="0.7"/>
-    <rect x="571" y="298" width="88" height="110" rx="3" fill="#CBC5AF" opacity="0.65"/>
-    <rect x="20" y="376" width="112" height="84" rx="3" fill="#D0CAC0" opacity="0.8"/>
-    <path d="M20,376 Q66,368 112,376" stroke="#C4BEB4" stroke-width="1.5" fill="none"/>
-    <rect x="145" y="378" width="240" height="80" rx="3" fill="#CCC6B2" opacity="0.75"/>
-    <path d="M0,26 H680" stroke="#A8A090" stroke-width="10" fill="none"/>
-    <path d="M0,26 H680" stroke="#B8B0A0" stroke-width="7" fill="none"/>
-    <text x="340" y="25" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#787060" font-weight="600">GENESEE AVE</text>
-    <path d="M0,415 H680" stroke="#A8A090" stroke-width="10" fill="none"/>
-    <path d="M0,415 H680" stroke="#B8B0A0" stroke-width="7" fill="none"/>
-    <text x="280" y="414" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#787060" font-weight="600">LA JOLLA VILLAGE DRIVE</text>
-    <path d="M30,26 Q28,120 32,220 Q36,320 30,415" stroke="#C0B9AA" stroke-width="7" fill="none"/>
-    <path d="M30,26 Q28,120 32,220 Q36,320 30,415" stroke="#CBC4B5" stroke-width="5" fill="none"/>
-    <rect x="428" y="0" width="24" height="420" fill="#B0A898"/>
-    <rect x="431" y="0" width="18" height="420" fill="#BEB6AC"/>
-    <path d="M440,0 L440,420" stroke="rgba(255,255,255,0.4)" stroke-width="1" stroke-dasharray="12,8"/>
-    <text x="440" y="200" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#787060" font-weight="700" transform="rotate(-90,440,200)">I-5 / SAN DIEGO FWY</text>
-    <path d="M55,26 Q52,90 54,160 Q56,230 50,300 Q44,370 46,415" stroke="#C8C2B6" stroke-width="5" fill="none"/>
-    <path d="M55,26 Q52,90 54,160 Q56,230 50,300 Q44,370 46,415" stroke="#D4CEC2" stroke-width="3.5" fill="none"/>
-    <path d="M30,124 Q100,118 160,122 Q220,126 280,120 Q340,114 395,118 Q415,120 428,122" stroke="#C4BEB2" stroke-width="6" fill="none"/>
-    <path d="M30,124 Q100,118 160,122 Q220,126 280,120 Q340,114 395,118 Q415,120 428,122" stroke="#D0CAC0" stroke-width="4" fill="none"/>
-    <text x="200" y="116" text-anchor="middle" font-size="7" font-family="sans-serif" fill="#8A8474">NORTH CAMPUS DR</text>
-    <path d="M55,210 Q120,205 180,210 Q230,215 280,208 Q330,201 385,206 Q410,208 428,210" stroke="#C4BEB2" stroke-width="6" fill="none"/>
-    <path d="M55,210 Q120,205 180,210 Q230,215 280,208 Q330,201 385,206 Q410,208 428,210" stroke="#D0CAC0" stroke-width="4" fill="none"/>
-    <text x="200" y="202" text-anchor="middle" font-size="7" font-family="sans-serif" fill="#8A8474">GILMAN DRIVE</text>
-    <path d="M55,320 Q100,315 150,318 Q200,321 245,315 Q280,309 310,315" stroke="#CCC6BA" stroke-width="5" fill="none"/>
-    <path d="M55,320 Q100,315 150,318 Q200,321 245,315 Q280,309 310,315" stroke="#D8D2C6" stroke-width="3" fill="none"/>
-    <text x="165" y="312" text-anchor="middle" font-size="7" font-family="sans-serif" fill="#8A8474">HOPKINS DRIVE</text>
-    <path d="M220,210 Q215,255 212,290 Q209,325 215,360" stroke="#CCC6BA" stroke-width="4" fill="none"/>
-    <path d="M350,210 Q340,230 335,260 Q330,290 338,320 Q346,350 340,380 Q334,410 330,415" stroke="#CCC6BA" stroke-width="4" fill="none"/>
-    <path d="M160,124 Q158,165 162,210" stroke="#D0CAC0" stroke-width="3" fill="none"/>
-    <path d="M280,124 Q278,165 282,210" stroke="#D0CAC0" stroke-width="3" fill="none"/>
-    <path d="M350,36 Q348,80 352,124" stroke="#D0CAC0" stroke-width="3" fill="none"/>
-    <path d="M246,36 Q244,80 248,124" stroke="#D0CAC0" stroke-width="3" fill="none"/>
-    <path d="M160,210 Q156,255 160,320" stroke="#D0CAC0" stroke-width="2.5" fill="none"/>
-    <path d="M280,210 Q276,265 280,320" stroke="#D0CAC0" stroke-width="2.5" fill="none"/>
-    <path d="M450,36 Q448,100 452,160 Q456,220 450,280" stroke="#D0CAC0" stroke-width="3" fill="none"/>
-    <path d="M510,36 Q508,100 512,160 Q516,220 510,280" stroke="#D0CAC0" stroke-width="3" fill="none"/>
-    <path d="M450,112 Q510,108 570,112" stroke="#D0CAC0" stroke-width="3" fill="none"/>
-    <path d="M450,186 Q510,182 596,186" stroke="#D0CAC0" stroke-width="3" fill="none"/>
-    <rect x="62" y="135" width="88" height="65" rx="2" fill="#D4CEC4" opacity="0.9"/>
-    <rect x="66" y="139" width="25" height="15" rx="1" fill="#C8C2B8"/>
-    <rect x="95" y="139" width="22" height="15" rx="1" fill="#C8C2B8"/>
-    <rect x="121" y="139" width="22" height="15" rx="1" fill="#C8C2B8"/>
-    <rect x="66" y="158" width="22" height="14" rx="1" fill="#C8C2B8"/>
-    <rect x="92" y="158" width="30" height="14" rx="1" fill="#C8C2B8"/>
-    <rect x="126" y="158" width="18" height="14" rx="1" fill="#C8C2B8"/>
-    <rect x="66" y="176" width="35" height="18" rx="1" fill="#C8C2B8"/>
-    <rect x="105" y="176" width="35" height="18" rx="1" fill="#C8C2B8"/>
-    <text x="106" y="148" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#6A6458" font-weight="600">REVELLE / MUIR</text>
-    <rect x="165" y="132" width="110" height="70" rx="2" fill="#D0CAC0" opacity="0.9"/>
-    <rect x="170" y="148" width="35" height="20" rx="1" fill="#C8C2B8"/>
-    <rect x="210" y="148" width="30" height="20" rx="1" fill="#C8C2B8"/>
-    <rect x="244" y="148" width="24" height="20" rx="1" fill="#C8C2B8"/>
-    <rect x="170" y="173" width="24" height="20" rx="1" fill="#C8C2B8"/>
-    <rect x="198" y="173" width="34" height="20" rx="1" fill="#C8C2B8"/>
-    <rect x="236" y="173" width="32" height="20" rx="1" fill="#C8C2B8"/>
-    <text x="220" y="145" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#6A6458" font-weight="600">PRICE CTR / GEISEL</text>
-    <rect x="286" y="132" width="90" height="70" rx="2" fill="#D0CAC0" opacity="0.85"/>
-    <rect x="292" y="148" width="28" height="18" rx="1" fill="#C8C2B8"/>
-    <rect x="324" y="148" width="26" height="18" rx="1" fill="#C8C2B8"/>
-    <rect x="354" y="148" width="16" height="18" rx="1" fill="#C8C2B8"/>
-    <rect x="292" y="170" width="42" height="24" rx="1" fill="#C8C2B8"/>
-    <rect x="338" y="170" width="30" height="24" rx="1" fill="#C8C2B8"/>
-    <text x="330" y="145" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#6A6458" font-weight="600">RADY / RIMAC N.</text>
-    <rect x="62" y="220" width="85" height="90" rx="2" fill="#D4CEC4" opacity="0.9"/>
-    <rect x="66" y="230" width="32" height="18" rx="1" fill="#C8C2B8"/>
-    <rect x="102" y="230" width="38" height="18" rx="1" fill="#C8C2B8"/>
-    <rect x="66" y="252" width="25" height="18" rx="1" fill="#C8C2B8"/>
-    <rect x="95" y="252" width="45" height="18" rx="1" fill="#C8C2B8"/>
-    <rect x="66" y="274" width="40" height="28" rx="1" fill="#C8C2B8"/>
-    <rect x="110" y="274" width="28" height="28" rx="1" fill="#C8C2B8"/>
-    <text x="105" y="228" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#6A6458" font-weight="600">HOPKINS AREA</text>
-    <rect x="290" y="36" width="130" height="80" rx="2" fill="#D4CEC4" opacity="0.85"/>
-    <rect x="296" y="52" width="30" height="18" rx="1" fill="#C8C2B8"/>
-    <rect x="330" y="52" width="36" height="18" rx="1" fill="#C8C2B8"/>
-    <rect x="370" y="52" width="28" height="18" rx="1" fill="#C8C2B8"/>
-    <rect x="296" y="74" width="26" height="16" rx="1" fill="#C8C2B8"/>
-    <rect x="326" y="74" width="40" height="16" rx="1" fill="#C8C2B8"/>
-    <rect x="370" y="74" width="26" height="16" rx="1" fill="#C8C2B8"/>
-    <rect x="296" y="94" width="34" height="18" rx="1" fill="#C8C2B8"/>
-    <rect x="334" y="94" width="28" height="18" rx="1" fill="#C8C2B8"/>
-    <rect x="366" y="94" width="32" height="18" rx="1" fill="#C8C2B8"/>
-    <text x="354" y="48" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#6A6458" font-weight="600">SCHOLARS / MESA NUEVA</text>
-    <rect x="450" y="44" width="140" height="60" rx="2" fill="#D0CAC0" opacity="0.85"/>
-    <rect x="456" y="56" width="30" height="16" rx="1" fill="#C8C2B8"/>
-    <rect x="490" y="56" width="34" height="16" rx="1" fill="#C8C2B8"/>
-    <rect x="528" y="56" width="28" height="16" rx="1" fill="#C8C2B8"/>
-    <rect x="560" y="56" width="22" height="16" rx="1" fill="#C8C2B8"/>
-    <rect x="456" y="76" width="38" height="22" rx="1" fill="#C8C2B8"/>
-    <rect x="498" y="76" width="30" height="22" rx="1" fill="#C8C2B8"/>
-    <rect x="532" y="76" width="50" height="22" rx="1" fill="#C8C2B8"/>
-    <text x="518" y="52" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#6A6458" font-weight="600">HEALTH SCIENCES</text>
-    <rect x="450" y="118" width="140" height="60" rx="2" fill="#D0CAC0" opacity="0.8"/>
-    <rect x="456" y="130" width="30" height="16" rx="1" fill="#C8C2B8"/>
-    <rect x="490" y="130" width="34" height="16" rx="1" fill="#C8C2B8"/>
-    <rect x="528" y="130" width="28" height="16" rx="1" fill="#C8C2B8"/>
-    <rect x="560" y="130" width="22" height="16" rx="1" fill="#C8C2B8"/>
-    <rect x="456" y="150" width="38" height="22" rx="1" fill="#C8C2B8"/>
-    <rect x="498" y="150" width="30" height="22" rx="1" fill="#C8C2B8"/>
-    <rect x="532" y="150" width="50" height="22" rx="1" fill="#C8C2B8"/>
-    <text x="518" y="126" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#6A6458" font-weight="600">BIOMEDICAL</text>
-    <rect x="450" y="192" width="140" height="86" rx="2" fill="#D0CAC0" opacity="0.75"/>
-    <rect x="456" y="202" width="36" height="20" rx="1" fill="#C8C2B8"/>
-    <rect x="496" y="202" width="30" height="20" rx="1" fill="#C8C2B8"/>
-    <rect x="530" y="202" width="52" height="20" rx="1" fill="#C8C2B8"/>
-    <rect x="456" y="226" width="28" height="20" rx="1" fill="#C8C2B8"/>
-    <rect x="488" y="226" width="40" height="20" rx="1" fill="#C8C2B8"/>
-    <rect x="532" y="226" width="50" height="20" rx="1" fill="#C8C2B8"/>
-    <rect x="456" y="250" width="38" height="22" rx="1" fill="#C8C2B8"/>
-    <rect x="498" y="250" width="84" height="22" rx="1" fill="#C8C2B8"/>
-    <text x="518" y="198" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#6A6458" font-weight="600">MEDICAL CENTER</text>
-    <rect x="22" y="388" width="108" height="68" rx="2" fill="#D0CAC0" opacity="0.8"/>
-    <rect x="28" y="398" width="30" height="16" rx="1" fill="#C8C2B8"/>
-    <rect x="62" y="398" width="28" height="16" rx="1" fill="#C8C2B8"/>
-    <rect x="94" y="398" width="28" height="16" rx="1" fill="#C8C2B8"/>
-    <rect x="28" y="418" width="34" height="28" rx="1" fill="#C8C2B8"/>
-    <rect x="66" y="418" width="58" height="28" rx="1" fill="#C8C2B8"/>
-    <text x="76" y="395" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#6A6458" font-weight="600">SIO / SCRIPPS</text>
-    <rect x="455" y="300" width="80" height="40" rx="2" fill="#CBC5AF" opacity="0.7"/>
-    <rect x="540" y="300" width="72" height="40" rx="2" fill="#CBC5AF" opacity="0.7"/>
-    <rect x="618" y="300" width="46" height="40" rx="2" fill="#CBC5AF" opacity="0.7"/>
-    <rect x="455" y="345" width="60" height="45" rx="2" fill="#CBC5AF" opacity="0.7"/>
-    <rect x="520" y="345" width="70" height="45" rx="2" fill="#CBC5AF" opacity="0.7"/>
-    <rect x="596" y="345" width="68" height="45" rx="2" fill="#CBC5AF" opacity="0.7"/>
-    <text x="554" y="322" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#6A6458" font-weight="600">CAMPUS POINT</text>
-    <rect x="158" y="385" width="240" height="68" rx="2" fill="#CCC6B2" opacity="0.7"/>
-    <text x="264" y="392" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#6A6458" font-weight="600">SOUTHWEST / COMMUTER LOTS</text>
-    <rect x="5" y="282" width="72" height="16" rx="3" fill="rgba(234,228,216,0.92)"/>
-    <circle cx="13" cy="290" r="4" fill="#1D9E75"/>
-    <text x="20" y="293" font-size="8" font-family="sans-serif" fill="#787060">&lt;50% occupied</text>
-    <rect x="5" y="300" width="72" height="16" rx="3" fill="rgba(234,228,216,0.92)"/>
-    <circle cx="13" cy="308" r="4" fill="#B07C0A"/>
-    <text x="20" y="311" font-size="8" font-family="sans-serif" fill="#787060">50&#8211;75% full</text>
-    <rect x="5" y="318" width="72" height="16" rx="3" fill="rgba(234,228,216,0.92)"/>
-    <circle cx="13" cy="326" r="4" fill="#C0572A"/>
-    <text x="20" y="329" font-size="8" font-family="sans-serif" fill="#787060">75&#8211;90% full</text>
-    <rect x="5" y="336" width="72" height="16" rx="3" fill="rgba(234,228,216,0.92)"/>
-    <circle cx="13" cy="344" r="4" fill="#C0392B"/>
-    <text x="20" y="347" font-size="8" font-family="sans-serif" fill="#787060">90%+ full</text>
-    </svg>
-    <div class="cm-ring" id="cmRing" style="width:0;height:0;left:50%;top:50%"></div>
-    <div id="cmPins"></div>
-    <div class="cm-tip" id="cmTip">
-      <div style="font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:1px" id="cmTipLot"></div>
-      <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:7px" id="cmTipSub"></div>
-      <div id="cmTipBars"></div>
-    </div>
-    </div>
+    <div class="pred-grid">
+      <div class="pred-sidebar">
+        <div class="pred-panel">
+          <div class="pred-panel-title">Your Trip</div>
+          <div class="form-group">
+            <label class="form-label">Destination on campus</label>
+            <select id="pdDest" class="form-select">
+              <option value="">— select destination —</option>
+              <option value="geisel">Geisel Library / Price Center</option>
+              <option value="rimac">RIMAC / Rady School</option>
+              <option value="warren">Warren / Sixth / Marshall</option>
+              <option value="revelle">Revelle / Muir</option>
+              <option value="health">Health Sciences</option>
+              <option value="scholars">Scholars / Mesa Nueva</option>
+              <option value="hopkins">Hopkins / South Mesa</option>
+              <option value="sio">SIO / Scripps</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Arrival time</label>
+            <input type="range" id="pdTime" class="time-slider" min="0" max="9" value="3" oninput="pdUpdateTime()">
+            <div class="time-display" id="pdTimeLabel">11am</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Permit type</label>
+            <div class="permit-chips" id="pdPermits"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Academic quarter</label>
+            <div class="permit-chips" id="pdSeasons"></div>
+          </div>
+          <button class="pred-btn" onclick="pdRun()">Find Available Spots</button>
+        </div>
+        <div class="pred-panel" style="background:var(--cream);border-color:var(--cream2)">
+          <div class="pred-panel-title">How it works</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.7">
+            Zones color green, amber, or red based on <strong style="color:var(--ink)">historical survey averages</strong>.
+            <br><br><strong style="color:var(--red)">Not real-time.</strong> Expect ±25% variation.
+          </div>
+        </div>
+      </div>
 
-    <div class="cm-bar">
-      <div>
-        <span class="ctrl-label">Destination</span>
-        <select id="cmDest" style="width:100%;font-size:13px;margin-top:4px">
-          <option value="">— select campus destination —</option>
-          <option value="geisel">Geisel Library / Price Center</option>
-          <option value="rimac">RIMAC / Rady School</option>
-          <option value="warren">Warren / Sixth / Marshall</option>
-          <option value="revelle">Revelle / Muir</option>
-          <option value="health">Health Sciences</option>
-          <option value="scholars">Scholars / Mesa Nueva</option>
-          <option value="hopkins">Hopkins / South Mesa</option>
-          <option value="sio">SIO / Scripps</option>
-          <option value="medical">Medical Center / Campus Point</option>
-        </select>
-        <span class="ctrl-label" style="margin-top:10px;display:block">Permit type</span>
-        <div class="cm-chips" id="cmChips"></div>
-      </div>
-      <div>
-        <span class="ctrl-label">Arrival time &mdash; <strong id="cmTimeDisp" style="color:var(--color-text-primary);font-size:16px">11am</strong></span>
-        <input type="range" min="0" max="9" value="3" id="cmTime" style="width:100%;margin:6px 0" oninput="cmUpd()">
-        <span class="ctrl-label" style="margin-top:6px;display:block">Academic quarter</span>
-        <div class="cm-sz" id="cmSeasons"></div>
-      </div>
-      <div>
-        <button class="cm-fbtn" onclick="cmSearch()">Find Parking</button>
-      </div>
-    </div>
+      <div class="pred-main">
+        <!-- MAP -->
+        <div class="chart-card" style="padding:0;overflow:hidden;margin-bottom:1.25rem;position:relative">
+          <svg id="campusSVG" width="100%" viewBox="0 0 680 520" style="display:block">
 
-    <div class="cm-res" id="cmRes">
-      <div style="font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.09em;margin-bottom:8px" id="cmResTitle"></div>
-      <div class="cm-cards" id="cmCards"></div>
-      <div style="font-size:11px;color:var(--color-text-secondary);margin-top:10px;font-family:'DM Mono',monospace;padding-top:8px;border-top:1px solid var(--cream2)">Based on historical survey averages &middot; not real-time &middot; expect &plusmn;25% variation</div>
+            <!-- ── BASE GROUND ── -->
+            <rect width="680" height="520" fill="#EDE8DB"/>
+
+            <!-- ── CANYON / NATURAL AREA ── -->
+            <path d="M90,8 Q75,45 70,90 Q65,138 73,175 Q81,212 73,250
+                     Q65,288 73,322 Q81,356 73,390 Q65,424 72,460
+                     L88,460 Q96,420 88,385 Q80,350 90,312 Q100,274 88,236
+                     Q76,198 88,158 Q100,118 88,78 Q78,48 90,8 Z"
+                  fill="#B5C98A" opacity="0.8"/>
+            <path d="M90,8 Q105,45 100,88 Q95,131 105,168 Q115,205 103,244
+                     Q91,283 103,318 Q115,353 103,390 Q91,427 98,460
+                     L88,460 Q80,427 73,390 Q65,353 73,322 Q81,291 73,255
+                     Q65,219 73,180 Q81,141 73,100 Q65,59 75,8 Z"
+                  fill="#A8BF7E" opacity="0.6"/>
+
+            <!-- ── RIMAC ATHLETIC FIELDS ── -->
+            <rect x="73" y="8" width="146" height="92" rx="2" fill="#72A040" opacity="0.88"/>
+            <line x1="146" y1="8" x2="146" y2="100" stroke="#619035" stroke-width="0.8" opacity="0.5"/>
+            <line x1="73" y1="52" x2="219" y2="52" stroke="#619035" stroke-width="0.8" opacity="0.5"/>
+            <ellipse cx="108" cy="52" rx="25" ry="34" fill="none" stroke="#619035" stroke-width="0.8" opacity="0.4"/>
+            <ellipse cx="184" cy="52" rx="25" ry="34" fill="none" stroke="#619035" stroke-width="0.8" opacity="0.4"/>
+
+            <!-- ── SMALLER GREEN PATCHES ── -->
+            <ellipse cx="340" cy="55" rx="28" ry="40" fill="#C4D89C" opacity="0.65"/>
+            <circle cx="460" cy="35" r="18" fill="#C8DCA0" opacity="0.5"/>
+
+            <!-- ── OCEAN / CLIFFS (far left) ── -->
+            <path d="M0,8 Q12,80 10,160 Q8,240 12,320 Q16,400 10,480 L0,480 Z"
+                  fill="#D8E8F0" opacity="0.4"/>
+
+            <!-- ── BUILDING CLUSTERS (texture) ── -->
+            <!-- Revelle/Muir -->
+            <g opacity="0.7">
+              <rect x="36" y="112" width="22" height="14" rx="1" fill="#CBC3B8"/>
+              <rect x="62" y="112" width="18" height="14" rx="1" fill="#CBC3B8"/>
+              <rect x="84" y="112" width="24" height="14" rx="1" fill="#CBC3B8"/>
+              <rect x="36" y="130" width="30" height="12" rx="1" fill="#CBC3B8"/>
+              <rect x="70" y="130" width="20" height="12" rx="1" fill="#CBC3B8"/>
+              <rect x="94" y="130" width="16" height="12" rx="1" fill="#CBC3B8"/>
+              <rect x="36" y="146" width="38" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="78" y="146" width="28" height="16" rx="1" fill="#CBC3B8"/>
+            </g>
+            <!-- Price Center / Geisel -->
+            <g opacity="0.7">
+              <rect x="138" y="112" width="32" height="18" rx="1" fill="#CBC3B8"/>
+              <rect x="175" y="112" width="28" height="18" rx="1" fill="#CBC3B8"/>
+              <rect x="208" y="112" width="20" height="18" rx="1" fill="#CBC3B8"/>
+              <rect x="232" y="112" width="26" height="18" rx="1" fill="#CBC3B8"/>
+              <rect x="138" y="135" width="24" height="20" rx="1" fill="#CBC3B8"/>
+              <rect x="167" y="135" width="36" height="20" rx="1" fill="#CBC3B8"/>
+              <rect x="208" y="135" width="28" height="20" rx="1" fill="#CBC3B8"/>
+              <rect x="138" y="160" width="44" height="22" rx="1" fill="#CBC3B8"/>
+              <rect x="187" y="160" width="30" height="22" rx="1" fill="#CBC3B8"/>
+              <rect x="222" y="160" width="22" height="22" rx="1" fill="#CBC3B8"/>
+            </g>
+            <!-- Warren/Sixth -->
+            <g opacity="0.7">
+              <rect x="236" y="12" width="28" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="269" y="12" width="34" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="308" y="12" width="26" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="339" y="12" width="28" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="236" y="32" width="24" height="18" rx="1" fill="#CBC3B8"/>
+              <rect x="265" y="32" width="38" height="18" rx="1" fill="#CBC3B8"/>
+              <rect x="308" y="32" width="32" height="18" rx="1" fill="#CBC3B8"/>
+              <rect x="236" y="55" width="32" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="273" y="55" width="26" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="304" y="55" width="34" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="344" y="55" width="22" height="16" rx="1" fill="#CBC3B8"/>
+            </g>
+            <!-- Hopkins -->
+            <g opacity="0.7">
+              <rect x="36" y="264" width="28" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="69" y="264" width="34" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="36" y="285" width="22" height="18" rx="1" fill="#CBC3B8"/>
+              <rect x="63" y="285" width="38" height="18" rx="1" fill="#CBC3B8"/>
+              <rect x="36" y="308" width="30" height="20" rx="1" fill="#CBC3B8"/>
+              <rect x="71" y="308" width="28" height="20" rx="1" fill="#CBC3B8"/>
+            </g>
+            <!-- Health Sciences -->
+            <g opacity="0.7">
+              <rect x="398" y="12" width="30" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="433" y="12" width="34" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="472" y="12" width="28" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="505" y="12" width="22" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="398" y="33" width="36" height="20" rx="1" fill="#CBC3B8"/>
+              <rect x="440" y="33" width="30" height="20" rx="1" fill="#CBC3B8"/>
+              <rect x="476" y="33" width="48" height="20" rx="1" fill="#CBC3B8"/>
+              <rect x="398" y="58" width="28" height="18" rx="1" fill="#CBC3B8"/>
+              <rect x="431" y="58" width="36" height="18" rx="1" fill="#CBC3B8"/>
+              <rect x="473" y="58" width="52" height="18" rx="1" fill="#CBC3B8"/>
+              <rect x="398" y="82" width="38" height="18" rx="1" fill="#CBC3B8"/>
+              <rect x="441" y="82" width="30" height="18" rx="1" fill="#CBC3B8"/>
+              <rect x="476" y="82" width="50" height="18" rx="1" fill="#CBC3B8"/>
+            </g>
+            <!-- Medical Center -->
+            <g opacity="0.7">
+              <rect x="398" y="262" width="36" height="20" rx="1" fill="#CBC3B8"/>
+              <rect x="440" y="262" width="30" height="20" rx="1" fill="#CBC3B8"/>
+              <rect x="476" y="262" width="50" height="20" rx="1" fill="#CBC3B8"/>
+              <rect x="398" y="287" width="28" height="20" rx="1" fill="#CBC3B8"/>
+              <rect x="431" y="287" width="40" height="20" rx="1" fill="#CBC3B8"/>
+              <rect x="476" y="287" width="50" height="20" rx="1" fill="#CBC3B8"/>
+            </g>
+            <!-- SIO -->
+            <g opacity="0.7">
+              <rect x="18" y="388" width="28" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="51" y="388" width="22" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="78" y="388" width="28" height="16" rx="1" fill="#CBC3B8"/>
+              <rect x="18" y="409" width="34" height="28" rx="1" fill="#CBC3B8"/>
+              <rect x="57" y="409" width="44" height="28" rx="1" fill="#CBC3B8"/>
+            </g>
+            <!-- Campus Point -->
+            <g opacity="0.65">
+              <rect x="548" y="220" width="50" height="28" rx="1" fill="#CBC3B8"/>
+              <rect x="603" y="220" width="42" height="28" rx="1" fill="#CBC3B8"/>
+              <rect x="548" y="254" width="44" height="26" rx="1" fill="#CBC3B8"/>
+              <rect x="597" y="254" width="50" height="26" rx="1" fill="#CBC3B8"/>
+              <rect x="548" y="286" width="38" height="26" rx="1" fill="#CBC3B8"/>
+              <rect x="591" y="286" width="56" height="26" rx="1" fill="#CBC3B8"/>
+            </g>
+
+            <!-- ── ROAD NETWORK ── -->
+            <!-- Genesee Ave (top) -->
+            <rect x="0" y="0" width="680" height="12" fill="#C6BFB2"/>
+            <text x="340" y="9" text-anchor="middle" font-size="7" font-family="sans-serif" fill="#8A8272" font-weight="600">GENESEE AVE</text>
+            <!-- La Jolla Village Dr (bottom) -->
+            <rect x="0" y="508" width="680" height="12" fill="#C6BFB2"/>
+            <text x="280" y="517" text-anchor="middle" font-size="7" font-family="sans-serif" fill="#8A8272" font-weight="600">LA JOLLA VILLAGE DRIVE</text>
+            <!-- N. Torrey Pines Rd (left) -->
+            <path d="M26,8 Q24,130 28,260 Q32,390 26,508" stroke="#C6BFB2" stroke-width="7" fill="none"/>
+            <path d="M26,8 Q24,130 28,260 Q32,390 26,508" stroke="#D4CEC4" stroke-width="5" fill="none"/>
+            <text x="22" y="220" font-size="7" font-family="sans-serif" fill="#8A8272" font-weight="600" transform="rotate(-90,22,220)">N. TORREY PINES RD</text>
+            <!-- Gilman Drive -->
+            <path d="M26,108 Q100,103 160,106 Q220,109 280,104 Q340,99 386,103" stroke="#C6BFB2" stroke-width="6" fill="none"/>
+            <path d="M26,108 Q100,103 160,106 Q220,109 280,104 Q340,99 386,103" stroke="#D4CEC4" stroke-width="4" fill="none"/>
+            <text x="210" y="100" text-anchor="middle" font-size="7" font-family="sans-serif" fill="#8A8272" font-weight="500">GILMAN DRIVE</text>
+            <!-- Hopkins Drive -->
+            <path d="M26,258 Q80,253 132,256 Q180,259 228,254" stroke="#C6BFB2" stroke-width="5" fill="none"/>
+            <path d="M26,258 Q80,253 132,256 Q180,259 228,254" stroke="#D4CEC4" stroke-width="3.5" fill="none"/>
+            <text x="130" y="250" text-anchor="middle" font-size="7" font-family="sans-serif" fill="#8A8272" font-weight="500">HOPKINS DRIVE</text>
+            <!-- Internal campus roads -->
+            <path d="M132,108 Q130,180 134,258" stroke="#D4CEC4" stroke-width="3.5" fill="none"/>
+            <path d="M228,8  Q226,55  230,108" stroke="#D4CEC4" stroke-width="3.5" fill="none"/>
+            <path d="M284,8  Q282,55  286,108" stroke="#D4CEC4" stroke-width="3.5" fill="none"/>
+            <path d="M284,108 Q282,175 286,210" stroke="#D4CEC4" stroke-width="3" fill="none"/>
+            <path d="M228,108 Q226,175 230,210" stroke="#D4CEC4" stroke-width="3" fill="none"/>
+            <!-- Health Sciences internal -->
+            <path d="M398,108 Q396,160 400,210 Q404,260 398,310" stroke="#D4CEC4" stroke-width="3" fill="none"/>
+            <path d="M458,8   Q456,55  460,108 Q464,160 458,210" stroke="#D4CEC4" stroke-width="3" fill="none"/>
+            <path d="M518,8   Q516,55  520,108" stroke="#D4CEC4" stroke-width="3" fill="none"/>
+            <path d="M398,108 Q456,104 518,108" stroke="#D4CEC4" stroke-width="3" fill="none"/>
+            <path d="M398,208 Q456,204 536,208" stroke="#D4CEC4" stroke-width="3" fill="none"/>
+            <!-- I-5 Freeway (diagonal, prominent) -->
+            <path d="M390,0 L396,520" stroke="#B8B0A4" stroke-width="16" fill="none"/>
+            <path d="M390,0 L396,520" stroke="#C8C0B4" stroke-width="12" fill="none"/>
+            <path d="M393,0 L399,520" stroke="rgba(255,220,60,0.5)" stroke-width="1.5" stroke-dasharray="14,10" fill="none"/>
+            <text x="393" y="260" text-anchor="middle" font-size="7" font-family="sans-serif" fill="#7A7268" font-weight="700" transform="rotate(-90,393,260)">I-5 SAN DIEGO FWY</text>
+
+            <!-- ── ZONE POLYGONS (colored by JS) ── -->
+            <polygon id="pz-rimac"    points="73,8 219,8 219,100 73,100"    fill="transparent" stroke="none" stroke-width="2"/>
+            <polygon id="pz-warren"   points="222,8 386,8 386,100 222,100"  fill="transparent" stroke="none" stroke-width="2"/>
+            <polygon id="pz-scholars" points="288,8 386,8 386,100 288,100"  fill="transparent" stroke="none" stroke-width="2"/>
+            <polygon id="pz-revelle"  points="28,108 130,108 130,258 28,258" fill="transparent" stroke="none" stroke-width="2"/>
+            <polygon id="pz-geisel"   points="132,108 282,108 282,258 132,258" fill="transparent" stroke="none" stroke-width="2"/>
+            <polygon id="pz-rady"     points="286,108 386,108 386,210 286,210" fill="transparent" stroke="none" stroke-width="2"/>
+            <polygon id="pz-health"   points="398,8 534,8 534,210 398,210"  fill="transparent" stroke="none" stroke-width="2"/>
+            <polygon id="pz-bio"      points="398,210 534,210 534,340 398,340" fill="transparent" stroke="none" stroke-width="2"/>
+            <polygon id="pz-medical"  points="398,340 534,340 534,460 398,460" fill="transparent" stroke="none" stroke-width="2"/>
+            <polygon id="pz-hopkins"  points="28,262 130,262 130,370 28,370" fill="transparent" stroke="none" stroke-width="2"/>
+            <polygon id="pz-sio"      points="10,378 120,378 120,460 10,460" fill="transparent" stroke="none" stroke-width="2"/>
+            <polygon id="pz-sw"       points="132,382 368,382 368,460 132,460" fill="transparent" stroke="none" stroke-width="2"/>
+            <polygon id="pz-cp"       points="540,210 674,210 674,460 540,460" fill="transparent" stroke="none" stroke-width="2"/>
+
+            <!-- ── ZONE LABELS ── -->
+            <text x="146" y="52"  text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">RIMAC / ATHLETICS</text>
+            <text x="300" y="52"  text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">WARREN / SIXTH</text>
+            <text x="79"  y="183" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">REVELLE / MUIR</text>
+            <text x="207" y="183" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">PRICE CTR / GEISEL</text>
+            <text x="337" y="158" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">SCHOLARS</text>
+            <text x="466" y="100" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">HEALTH SCIENCES</text>
+            <text x="466" y="275" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">MEDICAL CTR</text>
+            <text x="79"  y="315" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">HOPKINS</text>
+            <text x="65"  y="418" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">SIO</text>
+            <text x="248" y="420" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">SOUTHWEST</text>
+            <text x="606" y="335" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="700" fill="white" stroke="rgba(0,0,0,0.55)" stroke-width="3" paint-order="stroke">CAMPUS POINT</text>
+
+            <!-- Legend -->
+            <rect x="5" y="280" width="76" height="56" rx="4" fill="rgba(237,232,219,0.92)"/>
+            <rect x="11" y="288" width="10" height="10" rx="2" fill="#B6E8D0" stroke="#0F8C55" stroke-width="0.5"/>
+            <text x="25" y="297" font-size="8" font-family="sans-serif" fill="#5A5040">Likely open</text>
+            <rect x="11" y="303" width="10" height="10" rx="2" fill="#FAE5B0" stroke="#C49010" stroke-width="0.5"/>
+            <text x="25" y="312" font-size="8" font-family="sans-serif" fill="#5A5040">Limited spots</text>
+            <rect x="11" y="318" width="10" height="10" rx="2" fill="#F7C0C0" stroke="#C0392B" stroke-width="0.5"/>
+            <text x="25" y="327" font-size="8" font-family="sans-serif" fill="#5A5040">Usually full</text>
+
+            <!-- Destination marker -->
+            <circle id="pdDestDot" cx="-99" cy="-99" r="8" fill="#0F2044" stroke="white" stroke-width="2" opacity="0.9"/>
+          </svg>
+          <!-- Lot pins -->
+          <div id="pdPinLayer" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4"></div>
+        </div>
+
+        <!-- RESULTS -->
+        <div id="pdEmpty" class="pred-empty">
+          <div class="ei">🔍</div>
+          <p>Select a destination and hit <strong>Find Available Spots</strong> to see predicted availability.</p>
+        </div>
+        <div id="pdResults" style="display:none">
+          <div class="results-header">
+            <div class="results-title" id="pdResultsTitle"></div>
+            <div class="results-sub" id="pdResultsSub"></div>
+          </div>
+          <div id="pdCards"></div>
+          <div class="disclaimer" id="pdDisclaimer"></div>
+        </div>
+      </div>
     </div>
   </section>
 
