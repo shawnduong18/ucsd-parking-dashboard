@@ -69,14 +69,15 @@ Three models were tested and compared using 5-fold stratified cross-validation:
 | Model | Accuracy | Precision | Recall | F1 Score |
 |---|---|---|---|---|
 | Logistic Regression | 71.8% | 71.8% | 100.0% | 83.6% |
-| **Random Forest** | **73.6%** | **74.4%** | **96.6%** | **84.0%** |
+| Random Forest | 73.6 | 74.4% | 96.6% | 84.0% |
 | K-Nearest Neighbors | 72.2% | 75.8% | 90.1% | 82.3% |
+| **XGBoost** | **73.1%** | **76.4%** | **86.8%** | **81.3%** |
 
-**Random Forest** was selected as the final model based on its F1 score, which balances precision and recall. For a parking tool, recall matters more than precision. I wanted to make sure that the model did not produce a high percentage of false positives, because from a product standpoint telling a user that a spot is available when it really is unavailable is not viable. 
+**XGBoost** was selected as the final model. It achieved the highest accuracy of all four algorithms, a 2.3-point improvement over Random Forest and 5.8 points over Logistic Regression. More importantly, the accuracy gain came from better precision. When XGBoost says a lot is available, it's right 76.4% of the time, compared to 71.4% for Random Forest.
 
 Feature importance analysis from the Random Forest revealed that **hour of day** and **campus location** are the two strongest predictors, followed by academic quarter and permit type. This makes intuitive sense: the time of day drives the core occupancy curve, and different parts of campus have very different baseline demand.
 
-Once the winning model was selected, it was used to generate a **pre-computed prediction table**: one predicted occupancy probability for every combination of lot, permit type, hour, and season. That table containing roughly 3,240 entries is what gets embedded directly into the dashboard. The model itself never runs in the browser.
+Once the ideal model was selected, it was used to generate a **pre-computed prediction table**: one predicted occupancy probability for every combination of lot, permit type, hour, and season. That table containing roughly 3,240 entries is what gets embedded directly into the dashboard. The model itself never runs in the browser.
 
 ---
 
