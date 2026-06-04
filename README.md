@@ -1,4 +1,4 @@
-# Building a Parking Occupancy Dashboard for UC San Diego
+# Parking Occupancy Dashboard for UC San Diego
 
 One of the most common frustrations for myself during my time at San Diego was driving and finding parking.
 
