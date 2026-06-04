@@ -18,11 +18,11 @@ I used the following tools for my analysis and modeling:
 
 **pandas + openpyxl** handled all Excel file reading, schema normalization, and output formatting. With 20 source files across three distinct format generations, these libraries did most of the heavy lifting.
 
-**scikit-learn** was used to train and evaluate the classification model — specifically `GradientBoostingRegressor` for the prediction table and `RandomForestClassifier`, `LogisticRegression`, and `KNeighborsClassifier` for the model comparison analysis.
+**scikit-learn** was used to train and evaluate the classification model specifically `GradientBoostingRegressor` for the prediction table and `RandomForestClassifier`, `LogisticRegression`, and `KNeighborsClassifier` for the model comparison analysis.
 
 **Matplotlib + Seaborn** were used to generate exploratory visualizations including heatmaps, box plots, and trend lines from the cleaned dataset.
 
-**Chart.js** powers all of the interactive charts in the web dashboard — line charts, bar charts, and horizontal rankings.
+**Chart.js** powers all of the interactive charts in the web dashboard.
 
 **HTML, CSS, and JavaScript** make up the entire front end. The dashboard is a single self-contained file with no server, no backend, and no external API dependencies, making it deployable for free on GitHub Pages.
 
@@ -40,7 +40,7 @@ Each generation required its own parsing logic. A single unified script would tr
 
 Beyond the format differences, the data had other issues: survey footnotes being parsed as lot IDs, space type labels like `"D ($5.00)"` that needed to be normalized to `"D"`, and numeric lot IDs from the SIO area that looked like data errors but were actually legitimate lot numbers.
 
-After cleaning, the combined dataset produced **289 rows** at the university-wide level and **13,033 rows** at the lot level — one row per lot, per permit type, per survey period.
+After cleaning, the combined dataset produced **289 rows** at the university-wide level and **13,033 rows** at the lot level one row per lot, per permit type, per survey period.
 
 It's also worth noting: the **2023–24 academic year is completely absent** from the source files. There is a one-year gap between Spring 2022–23 and Summer 2024–25 that appears in every chart.
 
@@ -50,7 +50,7 @@ It's also worth noting: the **2023–24 academic year is completely absent** fro
 
 With the data cleaned, I created visualizations to better understand parking behavior at UC San Diego. 
 
-The most interesting finding was visible in a single trend line: university-wide peak occupancy hit **91.1% in Winter 2019–20**, then collapsed to **40.2% in Spring 2019–20** when COVID emptied the campus. It has never fully recovered — recent periods plateau around 63–67%.
+The most interesting finding was visible in a single trend line: university-wide peak occupancy hit **91.1% in Winter 2019–20**, then collapsed to **40.2% in Spring 2019–20** when COVID emptied the campus. It has never fully recovered recent periods plateau around 63–67%.
 
 A seasonal heatmap (hour × quarter) made the daily occupancy pattern immediately clear. The **10am–12pm window in Fall and Winter** is consistently the darkest block this became one of the key features in the machine learning model.
 
