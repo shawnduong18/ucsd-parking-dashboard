@@ -28,7 +28,7 @@ I used the following tools for my analysis and modeling:
 
 ---
 
-## The Data Challenge
+## Data Cleaning
 
 Before any analysis could happen, the data had to be cleaned which turned out to be the most challenging part of this project. 
 
