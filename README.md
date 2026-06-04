@@ -107,9 +107,9 @@ An **About** tab documents the data source, permit type definitions, and known l
 
 ## Results
 
-For a tool built entirely from one survey day per quarter, the results held up well. The model correctly identifies available spots about three quarters of the time, and when it predicts availability it has high recall — it rarely misses a genuinely open lot.
+For a tool built entirely from one survey day per quarter, the results held up well. The model correctly identifies available spots about three quarters of the time, and when it predicts availability it has high recall meaning it rarely misses a genuinely open lot.
 
-The campus map brings the data to life in a way that a table or chart cannot. Watching the pin colors shift from green to red as the time slider crosses 10am in Fall makes the occupancy pattern instantly tangible.
+The campus map brings the data to life in a way that a table or chart cannot. Watching the pin colors shift from green to red as the time slider crosses 10am in Fall makes the occupancy pattern instantly tangible for users. 
 
 ---
 
