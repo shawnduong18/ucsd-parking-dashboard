@@ -50,7 +50,7 @@ It's also worth noting: the **2023–24 academic year is completely absent** fro
 
 With the data cleaned, I created visualizations to better understand parking behavior at UC San Diego. 
 
-The most striking finding was visible in a single trend line: university-wide peak occupancy hit **91.1% in Winter 2019–20**, then collapsed to **40.2% in Spring 2019–20** when COVID emptied the campus. It has never fully recovered — recent periods plateau around 63–67%.
+The most interesting finding was visible in a single trend line: university-wide peak occupancy hit **91.1% in Winter 2019–20**, then collapsed to **40.2% in Spring 2019–20** when COVID emptied the campus. It has never fully recovered — recent periods plateau around 63–67%.
 
 A seasonal heatmap (hour × quarter) made the daily occupancy pattern immediately clear. The **10am–12pm window in Fall and Winter** is consistently the darkest block this became one of the key features in the machine learning model.
 
