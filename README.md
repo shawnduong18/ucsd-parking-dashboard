@@ -60,7 +60,7 @@ A correlation matrix of the hourly stall counts confirmed strong positive correl
 
 ---
 
-## The Machine Learning Model
+## Implementing Machine Learning
 
 The model frames the prediction as a **binary classification problem**: given a lot, permit type, arrival hour, and academic quarter will a spot be available? A spot is defined as available when occupancy is below 90%.
 
