@@ -24,6 +24,10 @@ I used the following tools for my analysis and modeling:
 
 **Chart.js** powers all of the interactive charts in the web dashboard.
 
+**Leaflet** renders the interactive geographic map. It is a lightweight (~40 KB), open-source mapping library that runs entirely client-side with no API key required.
+ 
+**Overpass API** is queried directly from the browser at page load to fetch the current set of UCSD parking lots and structures from OpenStreetMap. Results are cached in `localStorage` for 7 days so subsequent visits load instantly without re-querying the public OSM servers.
+
 **HTML, CSS, and JavaScript** make up the entire front end. The dashboard is a single self-contained file with no server, no backend, and no external API dependencies, making it deployable for free on GitHub Pages.
 
 ---
@@ -97,7 +101,7 @@ An **About** tab documents the data source, permit type definitions, and known l
 
 **One survey day per quarter** is the most significant constraint. The model learns historical patterns, not real-time conditions. Events, construction, weather, and exam periods are not taking into consideration. The accuracy ceiling across all three models sits between 72–74%.
 
-**Format drift across six years** required significant reverse-engineering. Each format generation made different assumptions about how to organize lot-level data, and several fields changed names, positions, or granularity between versions.
+**Format drift across six years** required significant reverse-engineering. Each format generation made different assumptions about how to organize lot-level data, and several fields changed names, positions, or granularity between versions. Additionally, some parking lots were not included in the data however they are present on the dashboard through the OpenStreetMaps API so they aren't included in predictions.
 
 **Lot naming inconsistencies** meant the same physical structure could appear as `(P341-7)` in a 2020 file and `Hopkins` in a 2024 file. A manual mapping was required to reconcile these.
 
@@ -120,8 +124,6 @@ The purpose of this project goes further than to build a tool and gain insight, 
 The current iteration of the project is a foundation that can grow considerably with more data. Some directions worth exploring:
 
 **Real-time sensor integration** would be the single most impactful improvement. Connecting to live occupancy feeds would transform the tool from a historical pattern guide into a day-of planning resource, something closer to the live traffic layer in Google Maps.
-
-**A Google Maps or campus schematic overlay** for the interactive map would replace the current stylized campus drawing with accurate lot boundaries and real geography, making the Find Parking tool significantly more intuitive.
 
 **Exam period and event flagging** would add an important layer of context. Parking during finals week behaves very differently from a typical Tuesday in October, and the current model has no way to distinguish between the two.
 
