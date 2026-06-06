@@ -548,10 +548,6 @@ function closeTrends(){ }
   .le-sidebar{position:sticky;top:1rem}
   .le-panel{background:#fff;border:1px solid var(--cream2);border-radius:var(--radius);padding:1.1rem;margin-bottom:1rem}
   .le-panel-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:.7rem}
-  .search-wrap{position:relative;margin-bottom:.5rem}
-  .search-wrap input{width:100%;padding:.55rem .7rem .55rem 2rem;border:1px solid var(--sand);border-radius:var(--radius);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);outline:none}
-  .search-wrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(46,111,173,.1)}
-  .search-icon{position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none}
   .lot-list{max-height:240px;overflow-y:auto;border:1px solid var(--cream2);border-radius:var(--radius)}
   .lot-item{padding:.5rem .75rem;font-size:13px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--cream2);transition:background .1s}
   .lot-item:last-child{border-bottom:none}
@@ -1160,12 +1156,7 @@ function closeTrends(){ }
       <div>
         <div class="fp2-panel">
           <div class="fp2-panel-title">Your Trip</div>
-          <div class="fp2-fg" style="position:relative">
-            <label class="fp2-label">Search a building</label>
-            <input type="text" id="fp2-search" class="fp2-select" placeholder="e.g. Center Hall, Pepper Canyon..." autocomplete="off" style="margin-bottom:.4rem">
-            <div id="fp2-search-results" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 2px);background:#fff;border:1px solid var(--cream2);border-radius:6px;max-height:240px;overflow-y:auto;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,0.08)"></div>
-            <div style="font-size:10px;color:var(--muted);margin-top:.25rem;text-transform:uppercase;letter-spacing:.05em">or pick a campus area</div>
-          </div>
+
           <div class="fp2-fg">
             <label class="fp2-label">Destination</label>
             <select id="fp2-dest" class="fp2-select">
@@ -1417,12 +1408,7 @@ function closeTrends(){ }
         function processOverpassData(data) {
             const all = data.elements.filter(el => el.center || (el.lat && el.lon));
 
-            // Split parking lots from buildings
             const parkingEls = all.filter(el => (el.tags || {}).amenity === 'parking');
-            const buildingEls = all.filter(el => {
-              const t = el.tags || {};
-              return (t.building || t.amenity === 'library' || t.amenity === 'theatre' || t.amenity === 'college') && t.name;
-            });
 
             osmLots = parkingEls.map(el => {
                 const lat = el.center ? el.center.lat : el.lat;
@@ -1438,24 +1424,6 @@ function closeTrends(){ }
                 };
               });
 
-            // Build searchable buildings list — dedupe by name, sort alphabetically
-            const seen = new Set();
-            osmBuildings = buildingEls
-              .filter(el => {
-                const n = (el.tags || {}).name;
-                if (!n || seen.has(n.toLowerCase())) return false;
-                seen.add(n.toLowerCase());
-                return true;
-              })
-              .map(el => ({
-                osmId: el.id,
-                name: el.tags.name,
-                lat: el.center ? el.center.lat : el.lat,
-                lon: el.center ? el.center.lon : el.lon,
-                tags: el.tags
-              }))
-              .sort((a, b) => a.name.localeCompare(b.name));
-            console.log('[OSM] Loaded ' + osmBuildings.length + ' searchable buildings');
             const matched = osmLots.filter(l => l.lotId).length;
             document.getElementById('fp2-status').className = 'fp2-status loaded';
             document.getElementById('fp2-status').textContent =
