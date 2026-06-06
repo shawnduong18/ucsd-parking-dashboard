@@ -54,13 +54,13 @@ It's also worth noting: the **2023–24 academic year is completely absent** fro
 
 With the data cleaned, I created visualizations to better understand parking behavior at UC San Diego. 
 
-The most interesting finding was visible in a single trend line: university-wide peak occupancy hit **91.1% in Winter 2019–20**, then collapsed to **40.2% in Spring 2019–20** when COVID emptied the campus. It has never fully recovered recent periods plateau around 63–67%.
+University-wide Peak Occupancy by Quarter is the main visualization, a line chart plotting peak-hour occupancy (as a percentage) across 20 academic quarters from Fall 2019 through Winter 2025–26. Each data point is color-coded by season: gold for Fall, navy for Winter, green for Spring, and red triangles for Summer. A key insight callout above the chart highlights the pandemic's impact: occupancy collapsed from 91.1% in Winter 2019–20 to 40.2% by Spring 2020, and recovery has been steady but incomplete, with Winter 2025–26 sitting 26 percentage points below the pre-pandemic peak. A gap annotation flags the missing 2023–24 academic year from the source data.
 
-A seasonal heatmap (hour × quarter) made the daily occupancy pattern immediately clear. The **10am–12pm window in Fall and Winter** is consistently the darkest block this became one of the key features in the machine learning model.
+Average by Season is a four-bar chart showing mean peak occupancy grouped by academic quarter across all available years. The bars are color-matched to the season scheme above, making it easy to see at a glance which quarters consistently see the heaviest demand.
 
-A box plot of peak occupancy by permit type revealed something interesting about SR (Special Reserved) spaces: they are nearly 100% occupied in almost every period, with almost no spread. Reserved permit spaces, on the other hand, hover around 35–50% with high variability.
+Surface Lots vs. Structures is a dual-line chart overlaying the same quarterly timeline but splitting it into two series: surface lots (blue) and parking structures (green). The subtitle notes the key finding directly, structures run 5–10 percentage points higher than surface lots across the dataset, reflecting that structures serve more central, high-demand areas of campus.
 
-A correlation matrix of the hourly stall counts confirmed strong positive correlations across adjacent hours (0.95+), validating the assumption that occupancy builds and drops smoothly throughout the day rather than spiking randomly.
+Peak Occupancy by Campus Area is a horizontal bar chart ranking ten campus zones by their typical weekday peak demand, averaged over post-pandemic quarters. Bars are color-coded by demand tier: red (≥80%) for the highest-pressure areas like Geisel/Price Center (87.5%) and Warren/Sixth (83.8%), amber for mid-range zones, and green for lower-demand areas like SIO/Scripps (54.8%). This makes the geographic distribution of parking pressure immediately legible.
 
 ---
 
